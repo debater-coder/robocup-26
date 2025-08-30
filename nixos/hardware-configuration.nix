@@ -8,8 +8,8 @@
     [ (modulesPath + "/installer/scan/not-detected.nix")
     ];
 
-  boot.initrd.availableKernelModules = [ "xhci_pci" "usbhid" ];
-  boot.initrd.kernelModules = [ ];
+  boot.initrd.availableKernelModules = [ "xhci_pci" "usbhid" "dw-hdmi" ];
+  boot.initrd.kernelModules = [ "dw-hdmi" ];
   boot.kernelModules = [ ];
   boot.extraModulePackages = [ ];
 

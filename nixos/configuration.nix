@@ -10,6 +10,13 @@
   # Enables the generation of /boot/extlinux/extlinux.conf
   boot.loader.generic-extlinux-compatible.enable = true;
 
+  # https://github.com/NixOS/nixpkgs/issues/154163
+  nixpkgs.overlays = [
+    (final: super: {
+      makeModulesClosure = x:
+        super.makeModulesClosure (x // { allowMissing = true; });
+    })
+  ];
 
   # the user account on the machine
   users.users.robocup = {
@@ -25,6 +32,10 @@
   environment.systemPackages = with pkgs; [
     neovim
     wget
+    gh
+    git
+    libraspberrypi
+    raspberrypi-eeprom
   ];
 
   # allows the use of flakes
@@ -44,4 +55,22 @@
     SHELL = "zsh";
     EDITOR = "neovim";
   };
+
+  hardware = {
+    raspberry-pi."4".apply-overlays-dtmerge.enable = true;
+    raspberry-pi."4".fkms-3d.enable = true;
+    deviceTree = {
+      enable = true;
+    };
+  };
+
+  # desktop
+  services.xserver = {
+    enable = true;
+    displayManager.lightdm.enable = true;
+  };
+
+  services.desktopManager.gnome.enable = true;
+
+  system.stateVersion = "25.11";
 }

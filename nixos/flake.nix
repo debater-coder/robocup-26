@@ -3,9 +3,10 @@
 
   inputs = {
     nixpkgs.url = "github:nixos/nixpkgs/nixos-unstable";
+    nixos-hardware.url = "github:NixOS/nixos-hardware/master";
   };
 
-  outputs = { self, nixpkgs, ... }@inputs: rec {
+  outputs = { self, nixpkgs, nixos-hardware, ... }@inputs: rec {
 
     # here goes the other flake outputs, if you have any
 
@@ -13,6 +14,7 @@
       system = "aarch64-linux";
       modules = [
         ./configuration.nix
+        nixos-hardware.nixosModules.raspberry-pi-4
       ];
     };
   };

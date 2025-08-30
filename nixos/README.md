@@ -7,7 +7,7 @@ including setting up the control software as a system service.
 This image is based on these instructions:
 - [janissary](https://blog.janissary.xyz/posts/nixos-install-custom-image)
 
-
+[Building a NixOS system with the linux_rpi* kernels fails with `Module ... not found in directory` · Issue #154163 · NixOS/nixpkgs](https://github.com/NixOS/nixpkgs/issues/154163)
 ## Bringup instructions
 (based on article)
 
