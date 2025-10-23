@@ -30,5 +30,5 @@ unzstd -d nixos-sd-image-24.05.20231124.5a09cb4-aarch64-linux.img.zst -o nixos-s
 ```
 4. Flash the image:
 ```bash
-sudo dd if=~/nixos-sd-image.img of=/dev/DEVICEGOESHERE bs=1M status=progress
+sudo dd if=./nixos-sd-image.img of=/dev/DEVICEGOESHERE bs=1M status=progress
 ```
