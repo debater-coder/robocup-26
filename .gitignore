@@ -1,2 +1,24 @@
-nixos/pi.sd
-nixos/nixos-sd-image.img
+# Virtual environments
+venv/
+.venv/
+env/
+
+# Byte-code files
+__pycache__/
+*.pyc
+*.pyo
+
+# IDE/Editor specific files
+.vscode/
+.idea/
+
+# Log files
+*.log
+
+# Sensitive information
+*.env
+config.ini
+
+# Temporary files
+*.tmp
+*~
