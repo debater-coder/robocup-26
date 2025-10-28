@@ -21,3 +21,12 @@ However, Raspberry Pi specific dependencies such as `picamera2` depend on the
 versions libraries installed by `apt`. Thus, it is necessary to create a custom
 venv with `--system-site-packages` to include the python bindings to these
 libraries. `uv` will then manage the activated virtual environment.
+**Ensure the Nix DevShell is activated when creating the venv to avoid version conflicts**
+```bash
+python -m venv --system-site-packages .venv
+```
+
+Some dependencies (eg: opencv-python) require built dependencies better installed from apt:
+```bash
+sudo apt install python3-opencv
+```

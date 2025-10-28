@@ -20,13 +20,14 @@
         {
           default = pkgs.mkShell {
             packages = [
-              pkgs.python3
               pkgs.uv
+              pkgs.cmake
             ];
 
             shellHook = ''
+                unset PYTHONPATH
+                uv sync
               . .venv/bin/activate
-              uv sync
             '';
           };
         }
