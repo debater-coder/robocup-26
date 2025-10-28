@@ -40,7 +40,7 @@ cv2.createTrackbar("Val Min", "TrackBars", 153, 255, empty)
 cv2.createTrackbar("Val Max", "TrackBars", 255, 255, empty)
 
 while True:
-    img = cam.captureArray()
+    img = cam.capture_array()
     imgHSV = cv2.cvtColor(img, cv2.COLOR_BGR2HSV)
     # Call the callback function to get the slider values
     h_min, h_max, s_min, s_max, v_min, v_max = empty(0)
