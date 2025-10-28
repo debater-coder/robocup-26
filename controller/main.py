@@ -22,7 +22,7 @@ cam.start()
 while True:
     frame = cam.capture_array()
 
-    blurred = cv2.GaussianBlur(frame, (22, 22), 0)
+    blurred = cv2.GaussianBlur(frame, (11, 11), 0)
     hsv = cv2.cvtColor(blurred, cv2.COLOR_BGR2HSV)
     mask = cv2.inRange(hsv, orangeLower, orangeUpper)
     mask = cv2.erode(mask, None, iteration=2)
