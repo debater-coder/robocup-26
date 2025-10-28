@@ -1,8 +1,10 @@
-from typing import Sequence
+from typing import TYPE_CHECKING, Sequence
 import cv2
-from cv2.typing import MatLike
 import numpy as np
 from picamera2 import Picamera2
+
+if TYPE_CHECKING:
+    from cv2.typing import MatLike
 
 height = 480
 width = 640
