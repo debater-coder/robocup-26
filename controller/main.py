@@ -5,7 +5,7 @@ from picamera2 import Picamera2
 height = 480
 width = 640
 
-orangeLower = (0, 100, 20)
+orangeLower = (0, 160, 120)
 orangeUpper = (20, 255, 255)
 
 cam = Picamera2()
