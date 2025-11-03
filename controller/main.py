@@ -16,7 +16,7 @@ cam.configure(
 cam.start()
 
 while True:
-    frame = cam.capture_array()
+    frame = cam.capture_array().flip(-1)
 
     blurred = cv2.GaussianBlur(frame, (11, 11), 0)
     hsv = cv2.cvtColor(blurred, cv2.COLOR_BGR2HSV)
