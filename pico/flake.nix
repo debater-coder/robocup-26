@@ -20,8 +20,8 @@
             packages = with pkgs; [
               picotool
               flip-link
+              minicom
             ];
-
           };
         }
       );
