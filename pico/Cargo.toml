@@ -18,7 +18,12 @@ rp-pico = "0.9"
 panic-halt = "1.0.0"
 usb-device = "0.3.2"
 usbd-serial = "0.2.2"
-
+embassy-executor = {version="0.9.1", features=["arch-cortex-m", "executor-thread", "executor-interrupt", "defmt"]}
+embassy-rp = { version = "0.8.0", features = ["defmt", "unstable-pac", "time-driver", "critical-section-impl", "rp2040"] }
+embassy-time = { version = "0.5.0", features = ["defmt", "defmt-timestamp-uptime"] }
+embassy-usb = { version = "0.5.1",  features = ["defmt"] }
+embassy-usb-logger = "0.5.1"
+log = "0.4.28"
 # but you can use any BSP. Uncomment this to use the pro_micro_rp2040 BSP instead
 # sparkfun-pro-micro-rp2040 = "0.8"
 
