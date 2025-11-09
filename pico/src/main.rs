@@ -5,7 +5,7 @@
 #![no_std]
 #![no_main]
 
-use cobs::CobsDecoder;
+use cobs::{CobsDecoder, CobsEncoder};
 use embassy_executor::Spawner;
 use embassy_futures::join::join;
 use embassy_rp::bind_interrupts;
@@ -160,15 +160,26 @@ async fn echo<'d, T: Instance + 'd>(
 
                         info!("Received freq: {}", freq);
 
+                        // Send period to led_task
                         let period = Duration::from_hz(freq as u64);
                         PERIOD_SIGNAL.signal(period);
+
+                        // Return period in milliseconds
+                        let mut out_buf = [0u8; 62];
+                        let mut encoder = CobsEncoder::new(&mut out_buf);
+                        let Ok(_) = encoder.push(&period.as_millis().to_be_bytes()) else {
+                            warn!("Error encoding data!");
+                            continue;
+                        };
+                        encoder.finalize();
+                        class.write_packet(&[0]).await?;
+                        class.write_packet(&out_buf).await?;
+                        class.write_packet(&[0]).await?;
                     }
                 }
             }
         }
 
         info!("data: {:?}", data);
-
-        class.write_packet(data).await?;
     }
 }
