@@ -4,7 +4,10 @@ version = "0.1.0"
 description = "Add your description here"
 authors = [ ]
 requires-python = ">=3.11"
-dependencies = []
+dependencies = [
+    "cobs>=1.2.2",
+    "pyserial>=3.5",
+]
 
 [project.optional-dependencies]
 non-pi = [

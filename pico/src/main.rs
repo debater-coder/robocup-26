@@ -5,22 +5,34 @@
 #![no_std]
 #![no_main]
 
+use cobs::CobsDecoder;
 use embassy_executor::Spawner;
 use embassy_futures::join::join;
 use embassy_rp::bind_interrupts;
 use embassy_rp::gpio::{Level, Output};
 use embassy_rp::peripherals::USB;
 use embassy_rp::usb::{Driver, Instance, InterruptHandler};
-use embassy_time::Timer;
+use embassy_sync::blocking_mutex::raw::CriticalSectionRawMutex;
+use embassy_sync::signal::Signal;
+use embassy_time::{Duration, Timer};
 use embassy_usb::class::cdc_acm::{CdcAcmClass, State};
 use embassy_usb::driver::EndpointError;
 use embassy_usb::{Builder, Config};
-use log::info;
+use log::{info, warn};
 use {defmt_rtt as _, panic_probe as _};
 
 bind_interrupts!(struct Irqs {
     USBCTRL_IRQ => InterruptHandler<USB>;
 });
+
+static PERIOD_SIGNAL: Signal<CriticalSectionRawMutex, Duration> = Signal::new();
+
+fn update_period(period: &mut Duration) {
+    if let Some(duration) = PERIOD_SIGNAL.try_take() {
+        *period = duration;
+        log::info!("Period changed to {:?} millis", duration.as_millis());
+    }
+}
 
 #[embassy_executor::task]
 async fn logger_task(class: CdcAcmClass<'static, Driver<'static, USB>>) {
@@ -29,14 +41,20 @@ async fn logger_task(class: CdcAcmClass<'static, Driver<'static, USB>>) {
 
 #[embassy_executor::task]
 async fn led_task(mut led: Output<'static>) {
+    let mut period: Duration = Duration::from_secs(2);
+
     loop {
         info!("led on!");
         led.set_high();
-        Timer::after_secs(1).await;
+        Timer::after(period / 2).await;
+
+        update_period(&mut period);
 
         info!("led off!");
         led.set_low();
-        Timer::after_secs(1).await;
+        Timer::after(period / 2).await;
+
+        update_period(&mut period);
     }
 }
 
@@ -119,10 +137,38 @@ async fn echo<'d, T: Instance + 'd>(
     class: &mut CdcAcmClass<'d, Driver<'d, T>>,
 ) -> Result<(), Disconnected> {
     let mut buf = [0; 64];
+    let mut dest = [0; 1024];
+    let mut decoder = CobsDecoder::new(&mut dest);
+
     loop {
         let n = class.read_packet(&mut buf).await?;
         let data = &buf[..n];
+
+        for byte in data {
+            match decoder.feed(*byte) {
+                Err(e) => {
+                    warn!("Error parsing packet: {:?}", e);
+                }
+                Ok(None) => {}
+                Ok(Some(n)) => {
+                    if n != 4 {
+                        warn!("Invalid packet size");
+                    } else {
+                        let mut freq_dst = [0u8; 4];
+                        freq_dst.copy_from_slice(&decoder.dest()[..4]);
+                        let freq = u32::from_be_bytes(freq_dst);
+
+                        info!("Received freq: {}", freq);
+
+                        let period = Duration::from_hz(freq as u64);
+                        PERIOD_SIGNAL.signal(period);
+                    }
+                }
+            }
+        }
+
         info!("data: {:?}", data);
+
         class.write_packet(data).await?;
     }
 }

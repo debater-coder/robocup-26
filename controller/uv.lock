@@ -3,9 +3,25 @@ revision = 3
 requires-python = ">=3.11"
 
 [[package]]
+name = "cobs"
+version = "1.2.2"
+source = { registry = "https://pypi.org/simple" }
+sdist = { url = "https://files.pythonhosted.org/packages/34/ef/ea149311227a4fc3160cc885fce06da7c7d76782a308ef070b8065c69953/cobs-1.2.2.tar.gz", hash = "sha256:dbdd5e32111d72786f83d0c269215dcd6ac629b1ac1962c6878221f3b2ca98da", size = 14582, upload-time = "2025-07-20T01:08:35.434Z" }
+wheels = [
+    { url = "https://files.pythonhosted.org/packages/e5/e0/9574590639a624a9a84c89a569f36343523a306fff2ffddc9468a2b9b05d/cobs-1.2.2-cp312-cp312-win32.whl", hash = "sha256:3afe0cec5d91164f84dcf35b471949aa36285664d21ee984350e39d485707d11", size = 26400, upload-time = "2025-07-20T01:08:30.288Z" },
+    { url = "https://files.pythonhosted.org/packages/d3/4f/5418d9decdc4cf27a814fc189bc4fa44d216d37b871d633654f37ed331f8/cobs-1.2.2-cp312-cp312-win_amd64.whl", hash = "sha256:4da6048f6e16cbd6c8ec5e95e8520e226248ffb8d31e9d6fc5e0888b3b65c54b", size = 27776, upload-time = "2025-07-20T01:08:31.377Z" },
+    { url = "https://files.pythonhosted.org/packages/b4/df/7f07559954d53d09680aa4f5c72db999e7643253e2ca4e431023fe5c1c40/cobs-1.2.2-cp313-cp313-win32.whl", hash = "sha256:a8fdf6ca70247e7271caea6f2f6f9c0343f5e872e2fd47e21f71831fa9ababa8", size = 26401, upload-time = "2025-07-20T01:08:32.508Z" },
+    { url = "https://files.pythonhosted.org/packages/0c/00/5b063105ff567bb7fb72c3cd3e96116a3889381fa2c0e7747497391dbecc/cobs-1.2.2-cp313-cp313-win_amd64.whl", hash = "sha256:fe3f7194d5fbbc02e8fb03d26ad626a33fa0d420b50d66ed60ac4bf516322d8e", size = 27774, upload-time = "2025-07-20T01:08:33.692Z" },
+]
+
+[[package]]
 name = "controller"
 version = "0.1.0"
 source = { virtual = "." }
+dependencies = [
+    { name = "cobs" },
+    { name = "pyserial" },
+]
 
 [package.optional-dependencies]
 non-pi = [
@@ -13,7 +29,11 @@ non-pi = [
 ]
 
 [package.metadata]
-requires-dist = [{ name = "opencv-python", marker = "extra == 'non-pi'", specifier = ">=4.12.0.88" }]
+requires-dist = [
+    { name = "cobs", specifier = ">=1.2.2" },
+    { name = "opencv-python", marker = "extra == 'non-pi'", specifier = ">=4.12.0.88" },
+    { name = "pyserial", specifier = ">=3.5" },
+]
 provides-extras = ["non-pi"]
 
 [[package]]
@@ -79,4 +99,13 @@ wheels = [
     { url = "https://files.pythonhosted.org/packages/68/1f/795e7f4aa2eacc59afa4fb61a2e35e510d06414dd5a802b51a012d691b37/opencv_python-4.12.0.88-cp37-abi3-manylinux2014_x86_64.manylinux_2_17_x86_64.whl", hash = "sha256:092c16da4c5a163a818f120c22c5e4a2f96e0db4f24e659c701f1fe629a690f9", size = 67041680, upload-time = "2025-07-07T09:14:01.995Z" },
     { url = "https://files.pythonhosted.org/packages/02/96/213fea371d3cb2f1d537612a105792aa0a6659fb2665b22cad709a75bd94/opencv_python-4.12.0.88-cp37-abi3-win32.whl", hash = "sha256:ff554d3f725b39878ac6a2e1fa232ec509c36130927afc18a1719ebf4fbf4357", size = 30284131, upload-time = "2025-07-07T09:14:08.819Z" },
     { url = "https://files.pythonhosted.org/packages/fa/80/eb88edc2e2b11cd2dd2e56f1c80b5784d11d6e6b7f04a1145df64df40065/opencv_python-4.12.0.88-cp37-abi3-win_amd64.whl", hash = "sha256:d98edb20aa932fd8ebd276a72627dad9dc097695b3d435a4257557bbb49a79d2", size = 39000307, upload-time = "2025-07-07T09:14:16.641Z" },
+]
+
+[[package]]
+name = "pyserial"
+version = "3.5"
+source = { registry = "https://pypi.org/simple" }
+sdist = { url = "https://files.pythonhosted.org/packages/1e/7d/ae3f0a63f41e4d2f6cb66a5b57197850f919f59e558159a4dd3a818f5082/pyserial-3.5.tar.gz", hash = "sha256:3c77e014170dfffbd816e6ffc205e9842efb10be9f58ec16d3e8675b4925cddb", size = 159125, upload-time = "2020-11-23T03:59:15.045Z" }
+wheels = [
+    { url = "https://files.pythonhosted.org/packages/07/bc/587a445451b253b285629263eb51c2d8e9bcea4fc97826266d186f96f558/pyserial-3.5-py2.py3-none-any.whl", hash = "sha256:c4451db6ba391ca6ca299fb3ec7bae67a5c55dde170964c7a14ceefec02f2cf0", size = 90585, upload-time = "2020-11-23T03:59:13.41Z" },
 ]
