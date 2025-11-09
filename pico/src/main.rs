@@ -12,6 +12,7 @@ use embassy_rp::bind_interrupts;
 use embassy_rp::gpio::{Level, Output};
 use embassy_rp::peripherals::USB;
 use embassy_rp::usb::{Driver, Instance, InterruptHandler};
+use embassy_rp::watchdog::Watchdog;
 use embassy_sync::blocking_mutex::raw::CriticalSectionRawMutex;
 use embassy_sync::signal::Signal;
 use embassy_time::{Duration, Timer};
@@ -35,11 +36,6 @@ fn update_period(period: &mut Duration) {
 }
 
 #[embassy_executor::task]
-async fn logger_task(class: CdcAcmClass<'static, Driver<'static, USB>>) {
-    embassy_usb_logger::with_class!(1024, log::LevelFilter::Info, class).await;
-}
-
-#[embassy_executor::task]
 async fn led_task(mut led: Output<'static>) {
     let mut period: Duration = Duration::from_secs(2);
 
@@ -58,9 +54,22 @@ async fn led_task(mut led: Output<'static>) {
     }
 }
 
+/// This will allow resets in case of panic (but not any other type of hand)
+#[embassy_executor::task]
+async fn feed_watchdog(mut watchdog: Watchdog) {
+    loop {
+        watchdog.feed();
+        Timer::after_millis(100).await;
+    }
+}
+
 #[embassy_executor::main]
 async fn main(spawner: Spawner) {
     let p = embassy_rp::init(Default::default());
+
+    let mut watchdog = Watchdog::new(p.WATCHDOG);
+    watchdog.start(Duration::from_millis(500));
+    spawner.spawn(feed_watchdog(watchdog)).unwrap();
 
     let led = Output::new(p.PIN_10, Level::Low);
     spawner.spawn(led_task(led)).unwrap();
@@ -110,16 +119,16 @@ async fn main(spawner: Spawner) {
     // Run the USB device.
     let usb_fut = usb.run();
 
-    let echo_fut = async {
+    let command_fut = async {
         loop {
             class.wait_connection().await;
             log::info!("Connected");
-            let _ = echo(&mut class).await;
+            let _ = handle_commands(&mut class).await;
             log::info!("Disconnected");
         }
     };
 
-    join(usb_fut, join(echo_fut, log_fut)).await;
+    join(usb_fut, join(command_fut, log_fut)).await;
 }
 
 struct Disconnected {}
@@ -133,7 +142,7 @@ impl From<EndpointError> for Disconnected {
     }
 }
 
-async fn echo<'d, T: Instance + 'd>(
+async fn handle_commands<'d, T: Instance + 'd>(
     class: &mut CdcAcmClass<'d, Driver<'d, T>>,
 ) -> Result<(), Disconnected> {
     let mut buf = [0; 64];
