@@ -15,4 +15,4 @@ non-pi = [
 ]
 
 [tool.pyright]
-typeCheckingMode = "off"
+typeCheckingMode = "strict"
