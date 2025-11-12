@@ -21,6 +21,7 @@
               picotool
               flip-link
               minicom
+              cargo
             ];
           };
         }
