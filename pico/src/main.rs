@@ -71,7 +71,7 @@ async fn main(spawner: Spawner) {
     watchdog.start(Duration::from_millis(500));
     spawner.spawn(feed_watchdog(watchdog)).unwrap();
 
-    let led = Output::new(p.PIN_10, Level::Low);
+    let led = Output::new(p.PIN_25, Level::Low);
     spawner.spawn(led_task(led)).unwrap();
 
     // Create the driver, from the HAL.
