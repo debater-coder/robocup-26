@@ -22,35 +22,35 @@ use embassy_usb::{Builder, Config};
 use log::{info, warn};
 use {defmt_rtt as _, panic_probe as _};
 
+mod motor;
+
 bind_interrupts!(struct Irqs {
     USBCTRL_IRQ => InterruptHandler<USB>;
 });
 
-static PERIOD_SIGNAL: Signal<CriticalSectionRawMutex, Duration> = Signal::new();
+static PERIOD_SIGNAL: Signal<CriticalSectionRawMutex, Command> = Signal::new();
 
-fn update_period(period: &mut Duration) {
-    if let Some(duration) = PERIOD_SIGNAL.try_take() {
-        *period = duration;
-        log::info!("Period changed to {:?} millis", duration.as_millis());
-    }
+#[derive(Debug, PartialEq, Default)]
+struct Command {
+    /// Velocity forwards in mm/s
+    vx: i32,
+    /// Velocity left in mm/s
+    vy: i32,
+    /// Rotational speed anticlockwise in deg/s
+    vw: i32,
 }
 
 #[embassy_executor::task]
-async fn led_task(mut led: Output<'static>) {
-    let mut period: Duration = Duration::from_secs(2);
+async fn kinematics_task(mut led: Output<'static>) {
+    let mut command = Command::default();
 
     loop {
-        info!("led on!");
-        led.set_high();
-        Timer::after(period / 2).await;
-
-        update_period(&mut period);
-
-        info!("led off!");
-        led.set_low();
-        Timer::after(period / 2).await;
-
-        update_period(&mut period);
+        if let Some(new_command) = PERIOD_SIGNAL.try_take() {
+            if command != new_command {
+                command = new_command;
+                log::info!("Command changed to {:?}", command);
+            }
+        }
     }
 }
 
@@ -72,7 +72,7 @@ async fn main(spawner: Spawner) {
     spawner.spawn(feed_watchdog(watchdog)).unwrap();
 
     let led = Output::new(p.PIN_25, Level::Low);
-    spawner.spawn(led_task(led)).unwrap();
+    spawner.spawn(kinematics_task(led)).unwrap();
 
     // Create the driver, from the HAL.
     let driver = Driver::new(p.USB, Irqs);
