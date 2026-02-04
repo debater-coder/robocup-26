@@ -1,3 +1,5 @@
+from time import sleep
+
 import serial
 from cobs import cobs
 
@@ -41,14 +43,13 @@ def send_command(ser: serial.Serial, freq: int):
         response = read_cobs_packet(ser)
 
         if response:
-            return int.from_bytes(response, "big", signed=False)
+            return int.from_bytes(response, "big", signed=True)
         print("No response received, retrying...")
 
     raise CommandFailedError("Failed to receive command response.")
 
 
 while True:
-    freq = int(input("Frequency (Hz): "))
-
-    period = send_command(ser, freq)
-    print(f"New LED period: {period} milliseconds")
+    period = send_command(ser, 5)
+    print(f"New odom: {period} mm")
+    sleep(0.2)

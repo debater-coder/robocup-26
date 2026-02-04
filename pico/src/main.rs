@@ -5,14 +5,16 @@
 #![no_std]
 #![no_main]
 
+use core::f32::consts::TAU;
+
 use cobs::{CobsDecoder, CobsEncoder};
 use embassy_executor::Spawner;
 use embassy_futures::join::join;
-use embassy_rp::bind_interrupts;
-use embassy_rp::gpio::{Level, Output};
+use embassy_rp::gpio::{Input, Level, Output, Pull};
 use embassy_rp::peripherals::USB;
 use embassy_rp::usb::{Driver, Instance, InterruptHandler};
 use embassy_rp::watchdog::Watchdog;
+use embassy_rp::{bind_interrupts, gpio};
 use embassy_sync::blocking_mutex::raw::CriticalSectionRawMutex;
 use embassy_sync::signal::Signal;
 use embassy_time::{Duration, Timer};
@@ -28,29 +30,45 @@ bind_interrupts!(struct Irqs {
     USBCTRL_IRQ => InterruptHandler<USB>;
 });
 
-static PERIOD_SIGNAL: Signal<CriticalSectionRawMutex, Command> = Signal::new();
+static PERIOD_SIGNAL: Signal<CriticalSectionRawMutex, Duration> = Signal::new();
+static ODOM_SIGNAL: Signal<CriticalSectionRawMutex, i32> = Signal::new();
 
-#[derive(Debug, PartialEq, Default)]
-struct Command {
-    /// Velocity forwards in mm/s
-    vx: i32,
-    /// Velocity left in mm/s
-    vy: i32,
-    /// Rotational speed anticlockwise in deg/s
-    vw: i32,
+const PULSES_PER_MM: f32 = 2520.0 / (48.0 * TAU);
+
+fn update_period(period: &mut Duration) {
+    if let Some(duration) = PERIOD_SIGNAL.try_take() {
+        *period = duration;
+        log::info!("Period changed to {:?} millis", duration.as_millis());
+    }
 }
 
 #[embassy_executor::task]
-async fn kinematics_task(mut led: Output<'static>) {
-    let mut command = Command::default();
+async fn led_task(mut led: Output<'static>) {
+    let mut period: Duration = Duration::from_secs(2);
 
     loop {
-        if let Some(new_command) = PERIOD_SIGNAL.try_take() {
-            if command != new_command {
-                command = new_command;
-                log::info!("Command changed to {:?}", command);
-            }
-        }
+        info!("led on!");
+        led.set_high();
+        Timer::after(period / 2).await;
+
+        update_period(&mut period);
+
+        info!("led off!");
+        led.set_low();
+        Timer::after(period / 2).await;
+
+        update_period(&mut period);
+    }
+}
+
+#[embassy_executor::task]
+async fn odom_task(mut odom_pin: Input<'static>) {
+    let mut odom: i32 = 0;
+
+    loop {
+        odom_pin.wait_for_any_edge().await;
+        odom += 1;
+        ODOM_SIGNAL.signal(odom);
     }
 }
 
@@ -72,7 +90,10 @@ async fn main(spawner: Spawner) {
     spawner.spawn(feed_watchdog(watchdog)).unwrap();
 
     let led = Output::new(p.PIN_25, Level::Low);
-    spawner.spawn(kinematics_task(led)).unwrap();
+    spawner.spawn(led_task(led)).unwrap();
+
+    let odom_pin = Input::new(p.PIN_11, Pull::Up);
+    spawner.spawn(odom_task(odom_pin)).unwrap();
 
     // Create the driver, from the HAL.
     let driver = Driver::new(p.USB, Irqs);
@@ -148,6 +169,7 @@ async fn handle_commands<'d, T: Instance + 'd>(
     let mut buf = [0; 64];
     let mut dest = [0; 1024];
     let mut decoder = CobsDecoder::new(&mut dest);
+    let mut odom = 0;
 
     loop {
         let n = class.read_packet(&mut buf).await?;
@@ -173,10 +195,16 @@ async fn handle_commands<'d, T: Instance + 'd>(
                         let period = Duration::from_hz(freq as u64);
                         PERIOD_SIGNAL.signal(period);
 
+                        if let Some(odom_val) = ODOM_SIGNAL.try_take() {
+                            odom = odom_val;
+                        }
+
                         // Return period in milliseconds
                         let mut out_buf = [0u8; 62];
                         let mut encoder = CobsEncoder::new(&mut out_buf);
-                        let Ok(_) = encoder.push(&period.as_millis().to_be_bytes()) else {
+                        let Ok(_) =
+                            encoder.push(&((odom as f32 / PULSES_PER_MM) as i32).to_be_bytes())
+                        else {
                             warn!("Error encoding data!");
                             continue;
                         };
