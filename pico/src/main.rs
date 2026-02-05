@@ -6,22 +6,26 @@
 #![no_main]
 
 use core::f32::consts::TAU;
+use core::iter::zip;
 
+use crate::motor::MotorFeedback;
 use cobs::{CobsDecoder, CobsEncoder};
 use embassy_executor::Spawner;
 use embassy_futures::join::join;
+use embassy_rp::bind_interrupts;
 use embassy_rp::gpio::{Input, Level, Output, Pull};
 use embassy_rp::peripherals::USB;
+use embassy_rp::pwm::Pwm;
 use embassy_rp::usb::{Driver, Instance, InterruptHandler};
 use embassy_rp::watchdog::Watchdog;
-use embassy_rp::{bind_interrupts, gpio};
 use embassy_sync::blocking_mutex::raw::CriticalSectionRawMutex;
 use embassy_sync::signal::Signal;
-use embassy_time::{Duration, Timer};
+use embassy_time::{Duration, Ticker, Timer};
 use embassy_usb::class::cdc_acm::{CdcAcmClass, State};
 use embassy_usb::driver::EndpointError;
 use embassy_usb::{Builder, Config};
 use log::{info, warn};
+
 use {defmt_rtt as _, panic_probe as _};
 
 mod motor;
@@ -30,45 +34,71 @@ bind_interrupts!(struct Irqs {
     USBCTRL_IRQ => InterruptHandler<USB>;
 });
 
-static PERIOD_SIGNAL: Signal<CriticalSectionRawMutex, Duration> = Signal::new();
-static ODOM_SIGNAL: Signal<CriticalSectionRawMutex, i32> = Signal::new();
+static CONTROL_SIGNAL: Signal<CriticalSectionRawMutex, i32> = Signal::new();
+
+static ODOM_SIGNAL_FL: Signal<CriticalSectionRawMutex, u32> = Signal::new();
+static ODOM_SIGNAL_FR: Signal<CriticalSectionRawMutex, u32> = Signal::new();
+static ODOM_SIGNAL_RL: Signal<CriticalSectionRawMutex, u32> = Signal::new();
+static ODOM_SIGNAL_RR: Signal<CriticalSectionRawMutex, u32> = Signal::new();
 
 const PULSES_PER_MM: f32 = 2520.0 / (48.0 * TAU);
 
-fn update_period(period: &mut Duration) {
-    if let Some(duration) = PERIOD_SIGNAL.try_take() {
-        *period = duration;
-        log::info!("Period changed to {:?} millis", duration.as_millis());
-    }
-}
-
 #[embassy_executor::task]
 async fn led_task(mut led: Output<'static>) {
-    let mut period: Duration = Duration::from_secs(2);
+    let period: Duration = Duration::from_secs(2);
 
     loop {
         info!("led on!");
         led.set_high();
         Timer::after(period / 2).await;
 
-        update_period(&mut period);
-
         info!("led off!");
         led.set_low();
         Timer::after(period / 2).await;
-
-        update_period(&mut period);
     }
 }
 
 #[embassy_executor::task]
-async fn odom_task(mut odom_pin: Input<'static>) {
-    let mut odom: i32 = 0;
+async fn odom_task(
+    mut odom_pin: Input<'static>,
+    signal: &'static Signal<CriticalSectionRawMutex, u32>,
+) {
+    let mut odom: u32 = 0;
 
     loop {
         odom_pin.wait_for_any_edge().await;
         odom += 1;
-        ODOM_SIGNAL.signal(odom);
+        signal.signal(odom);
+    }
+}
+
+#[embassy_executor::task]
+async fn kinematics_task(
+    fl: MotorFeedback,
+    rl: MotorFeedback,
+    rr: MotorFeedback,
+    fr: MotorFeedback,
+) {
+    let mut ticker = Ticker::every(Duration::from_hz(20));
+    let mut motors = [fl, rl, rr, fr];
+    loop {
+        for (motor, signal) in zip(
+            &mut motors,
+            [
+                &ODOM_SIGNAL_FL,
+                &ODOM_SIGNAL_RL,
+                &ODOM_SIGNAL_RR,
+                &ODOM_SIGNAL_FR,
+            ],
+        ) {
+            if let Some(speed) = CONTROL_SIGNAL.try_take() {
+                motor.target = speed;
+            }
+
+            motor.update(signal.try_take().unwrap_or(0));
+        }
+
+        ticker.next().await;
     }
 }
 
@@ -92,8 +122,51 @@ async fn main(spawner: Spawner) {
     let led = Output::new(p.PIN_25, Level::Low);
     spawner.spawn(led_task(led)).unwrap();
 
-    let odom_pin = Input::new(p.PIN_11, Pull::Up);
-    spawner.spawn(odom_task(odom_pin)).unwrap();
+    spawner
+        .spawn(odom_task(Input::new(p.PIN_11, Pull::Up), &ODOM_SIGNAL_FL))
+        .unwrap();
+    spawner
+        .spawn(odom_task(Input::new(p.PIN_13, Pull::Up), &ODOM_SIGNAL_RL))
+        .unwrap();
+    spawner
+        .spawn(odom_task(Input::new(p.PIN_21, Pull::Up), &ODOM_SIGNAL_RR))
+        .unwrap();
+    spawner
+        .spawn(odom_task(Input::new(p.PIN_19, Pull::Up), &ODOM_SIGNAL_FR))
+        .unwrap();
+
+    spawner
+        .spawn(kinematics_task(
+            MotorFeedback::new(
+                Output::new(p.PIN_2, Level::Low),
+                Pwm::new_output_b(p.PWM_SLICE1, p.PIN_3, Default::default())
+                    .split()
+                    .1
+                    .unwrap(),
+            ),
+            MotorFeedback::new(
+                Output::new(p.PIN_4, Level::Low),
+                Pwm::new_output_b(p.PWM_SLICE2, p.PIN_5, Default::default())
+                    .split()
+                    .1
+                    .unwrap(),
+            ),
+            MotorFeedback::new(
+                Output::new(p.PIN_6, Level::Low),
+                Pwm::new_output_b(p.PWM_SLICE3, p.PIN_7, Default::default())
+                    .split()
+                    .1
+                    .unwrap(),
+            ),
+            MotorFeedback::new(
+                Output::new(p.PIN_8, Level::Low),
+                Pwm::new_output_b(p.PWM_SLICE4, p.PIN_9, Default::default())
+                    .split()
+                    .1
+                    .unwrap(),
+            ),
+        ))
+        .unwrap();
 
     // Create the driver, from the HAL.
     let driver = Driver::new(p.USB, Irqs);
@@ -185,17 +258,15 @@ async fn handle_commands<'d, T: Instance + 'd>(
                     if n != 4 {
                         warn!("Invalid packet size");
                     } else {
-                        let mut freq_dst = [0u8; 4];
-                        freq_dst.copy_from_slice(&decoder.dest()[..4]);
-                        let freq = u32::from_be_bytes(freq_dst);
+                        let mut control_dst = [0u8; 4];
+                        control_dst.copy_from_slice(&decoder.dest()[..4]);
+                        let control = i32::from_be_bytes(control_dst);
 
-                        info!("Received freq: {}", freq);
+                        info!("Received control: {}", control);
 
-                        // Send period to led_task
-                        let period = Duration::from_hz(freq as u64);
-                        PERIOD_SIGNAL.signal(period);
+                        CONTROL_SIGNAL.signal((control as f32 * PULSES_PER_MM) as i32);
 
-                        if let Some(odom_val) = ODOM_SIGNAL.try_take() {
+                        if let Some(odom_val) = ODOM_SIGNAL_FL.try_take() {
                             odom = odom_val;
                         }
 
