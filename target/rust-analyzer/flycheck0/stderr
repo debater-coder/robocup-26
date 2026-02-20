@@ -1,5 +1,5 @@
-   0.303515194s  INFO prepare_target{force=false package_id=pico v0.1.0 (/home/hamzah/robocup-26/pico) target="pico"}: cargo::core::compiler::fingerprint: fingerprint error for pico v0.1.0 (/home/hamzah/robocup-26/pico)/Check { test: true }/TargetInner { name: "pico", doc: true, ..: with_path("/home/hamzah/robocup-26/pico/src/main.rs", Edition2021) }
-   0.303610953s  INFO prepare_target{force=false package_id=pico v0.1.0 (/home/hamzah/robocup-26/pico) target="pico"}: cargo::core::compiler::fingerprint:     err: failed to read `/home/hamzah/robocup-26/pico/target/thumbv6m-none-eabi/debug/.fingerprint/pico-70440d07c2909839/test-bin-pico`
+   0.204864255s  INFO prepare_target{force=false package_id=pico v0.1.0 (/home/hamzah/robocup-26/pico) target="pico"}: cargo::core::compiler::fingerprint: fingerprint error for pico v0.1.0 (/home/hamzah/robocup-26/pico)/Check { test: true }/TargetInner { name: "pico", doc: true, ..: with_path("/home/hamzah/robocup-26/pico/src/main.rs", Edition2021) }
+   0.204898160s  INFO prepare_target{force=false package_id=pico v0.1.0 (/home/hamzah/robocup-26/pico) target="pico"}: cargo::core::compiler::fingerprint:     err: failed to read `/home/hamzah/robocup-26/pico/target/thumbv6m-none-eabi/debug/.fingerprint/pico-70440d07c2909839/test-bin-pico`
 
 Caused by:
     No such file or directory (os error 2)
