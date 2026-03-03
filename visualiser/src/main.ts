@@ -35,7 +35,12 @@ gui.add(config, "connectionUrl");
   fieldContainer.addChild(field);
 
   const robotTexture = await Assets.load("/assets/bot.png");
-  const robotPositions = [new Point(0, 0)];
+  const robotPositions = [
+    new Point(-400, -400),
+    new Point(-400, 400),
+    new Point(400, -400),
+    new Point(400, 400),
+  ];
 
   robotPositions.map((robot) => {
     const robotSprite = new Sprite(robotTexture);
