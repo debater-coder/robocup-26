@@ -8245,7 +8245,7 @@
 				(justify right)
 			)
 		)
-		(property "Footprint" "robocup-library:DRI044"
+		(property "Footprint" "robocup-library:DRI0044"
 			(at 91.44 38.1 0)
 			(effects
 				(font
@@ -8880,7 +8880,7 @@
 				(justify right)
 			)
 		)
-		(property "Footprint" "robocup-library:DRI044"
+		(property "Footprint" "robocup-library:DRI0044"
 			(at 76.2 147.32 0)
 			(effects
 				(font
@@ -9722,7 +9722,7 @@
 				(justify right)
 			)
 		)
-		(property "Footprint" "robocup-library:DRI044"
+		(property "Footprint" "robocup-library:DRI0044"
 			(at 92.71 78.74 0)
 			(effects
 				(font

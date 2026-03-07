@@ -1,4 +1,4 @@
-(footprint "DRI044"
+(footprint "DRI0044"
 	(version 20241229)
 	(generator "pcbnew")
 	(generator_version "9.0")
@@ -14,9 +14,9 @@
 			)
 		)
 	)
-	(property "Value" "DRI044"
-		(at 0 0 270)
-		(layer "F.Fab")
+	(property "Value" "DRI0044"
+		(at 0 0 0)
+		(layer "F.SilkS")
 		(uuid "c8e936f3-32a0-46f3-ac3b-b6890c856b06")
 		(effects
 			(font
@@ -130,6 +130,18 @@
 		(layer "F.SilkS")
 		(uuid "20192999-6846-4457-80fa-e2424eb60984")
 	)
+	(fp_poly
+		(pts
+			(xy 0 -7) (xy -1 -5) (xy 0 -5.5) (xy 1 -5)
+		)
+		(stroke
+			(width 0.1)
+			(type solid)
+		)
+		(fill yes)
+		(layer "F.SilkS")
+		(uuid "b64e3a89-ad91-4699-b2b4-938bd664627d")
+	)
 	(fp_line
 		(start -10.14 -7.6)
 		(end 10.14 -7.6)
@@ -169,6 +181,32 @@
 		)
 		(layer "F.CrtYd")
 		(uuid "2bc92f1e-81fb-4d1a-9054-83211c8216dd")
+	)
+	(fp_text user "DIR1"
+		(at -7.747 -5.715 0)
+		(unlocked yes)
+		(layer "F.SilkS")
+		(uuid "0bb3c3fb-9491-4094-ace7-b2c8fc9ec151")
+		(effects
+			(font
+				(size 1 1)
+				(thickness 0.1)
+			)
+			(justify left bottom)
+		)
+	)
+	(fp_text user "VM(<12V)"
+		(at 0.381 6.858 0)
+		(unlocked yes)
+		(layer "F.SilkS")
+		(uuid "5d91f858-bb4d-4339-9228-9c6bbc683de9")
+		(effects
+			(font
+				(size 1 1)
+				(thickness 0.1)
+			)
+			(justify left bottom)
+		)
 	)
 	(pad "1" thru_hole circle
 		(at -8.89 -6.35 270)
