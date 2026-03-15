@@ -1,5 +1,96 @@
-   0.204864255s  INFO prepare_target{force=false package_id=pico v0.1.0 (/home/hamzah/robocup-26/pico) target="pico"}: cargo::core::compiler::fingerprint: fingerprint error for pico v0.1.0 (/home/hamzah/robocup-26/pico)/Check { test: true }/TargetInner { name: "pico", doc: true, ..: with_path("/home/hamzah/robocup-26/pico/src/main.rs", Edition2021) }
-   0.204898160s  INFO prepare_target{force=false package_id=pico v0.1.0 (/home/hamzah/robocup-26/pico) target="pico"}: cargo::core::compiler::fingerprint:     err: failed to read `/home/hamzah/robocup-26/pico/target/thumbv6m-none-eabi/debug/.fingerprint/pico-70440d07c2909839/test-bin-pico`
+   0.559096439s  INFO prepare_target{force=false package_id=pico v0.1.0 (/home/hamzah/robocup-26/pico) target="blink"}: cargo::core::compiler::fingerprint: fingerprint error for pico v0.1.0 (/home/hamzah/robocup-26/pico)/Check { test: true }/TargetInner { name: "blink", doc: true, ..: with_path("/home/hamzah/robocup-26/pico/src/bin/blink.rs", Edition2021) }
+   0.559142271s  INFO prepare_target{force=false package_id=pico v0.1.0 (/home/hamzah/robocup-26/pico) target="blink"}: cargo::core::compiler::fingerprint:     err: failed to read `/home/hamzah/robocup-26/pico/target/thumbv6m-none-eabi/debug/.fingerprint/pico-869babd61a1e56df/test-bin-blink`
+
+Caused by:
+    No such file or directory (os error 2)
+
+Stack backtrace:
+   0: cargo_util::paths::read_bytes
+   1: cargo_util::paths::read
+   2: cargo::core::compiler::fingerprint::_compare_old_fingerprint
+   3: cargo::core::compiler::fingerprint::prepare_target
+   4: cargo::core::compiler::compile
+   5: <cargo::core::compiler::build_runner::BuildRunner>::compile
+   6: cargo::ops::cargo_compile::compile_ws
+   7: cargo::ops::cargo_compile::compile_with_exec
+   8: cargo::ops::cargo_compile::compile
+   9: cargo::commands::check::exec
+  10: <cargo::cli::Exec>::exec
+  11: cargo::main
+  12: std::sys::backtrace::__rust_begin_short_backtrace::<fn(), ()>
+  13: std::rt::lang_start::<()>::{closure#0}
+  14: core::ops::function::impls::<impl core::ops::function::FnOnce<A> for &F>::call_once
+             at /rustc/160e7623e8cbbf1feab2b6e2a24733a98c7bde9c/library/core/src/ops/function.rs:290:21
+  15: std::panicking::catch_unwind::do_call
+             at /rustc/160e7623e8cbbf1feab2b6e2a24733a98c7bde9c/library/std/src/panicking.rs:590:40
+  16: std::panicking::catch_unwind
+             at /rustc/160e7623e8cbbf1feab2b6e2a24733a98c7bde9c/library/std/src/panicking.rs:553:19
+  17: std::panic::catch_unwind
+             at /rustc/160e7623e8cbbf1feab2b6e2a24733a98c7bde9c/library/std/src/panic.rs:359:14
+  18: std::rt::lang_start_internal::{{closure}}
+             at /rustc/160e7623e8cbbf1feab2b6e2a24733a98c7bde9c/library/std/src/rt.rs:175:24
+  19: std::panicking::catch_unwind::do_call
+             at /rustc/160e7623e8cbbf1feab2b6e2a24733a98c7bde9c/library/std/src/panicking.rs:590:40
+  20: std::panicking::catch_unwind
+             at /rustc/160e7623e8cbbf1feab2b6e2a24733a98c7bde9c/library/std/src/panicking.rs:553:19
+  21: std::panic::catch_unwind
+             at /rustc/160e7623e8cbbf1feab2b6e2a24733a98c7bde9c/library/std/src/panic.rs:359:14
+  22: std::rt::lang_start_internal
+             at /rustc/160e7623e8cbbf1feab2b6e2a24733a98c7bde9c/library/std/src/rt.rs:171:5
+  23: main
+  24: __libc_start_call_main
+  25: __libc_start_main_impl
+  26: <unknown>
+   0.579461053s  INFO prepare_target{force=false package_id=pico v0.1.0 (/home/hamzah/robocup-26/pico) target="encoders_test"}: cargo::core::compiler::fingerprint: stale: changed "/home/hamzah/robocup-26/pico/src/bin/encoders_test.rs"
+   0.579484689s  INFO prepare_target{force=false package_id=pico v0.1.0 (/home/hamzah/robocup-26/pico) target="encoders_test"}: cargo::core::compiler::fingerprint:           (vs) "/home/hamzah/robocup-26/pico/target/thumbv6m-none-eabi/debug/.fingerprint/pico-e03b3d9676c501b4/dep-bin-encoders_test"
+   0.579492510s  INFO prepare_target{force=false package_id=pico v0.1.0 (/home/hamzah/robocup-26/pico) target="encoders_test"}: cargo::core::compiler::fingerprint:                FileTime { seconds: 1773618336, nanos: 798917129 } < FileTime { seconds: 1773618687, nanos: 263778409 }
+   0.579612974s  INFO prepare_target{force=false package_id=pico v0.1.0 (/home/hamzah/robocup-26/pico) target="encoders_test"}: cargo::core::compiler::fingerprint: fingerprint dirty for pico v0.1.0 (/home/hamzah/robocup-26/pico)/Check { test: false }/TargetInner { name: "encoders_test", doc: true, ..: with_path("/home/hamzah/robocup-26/pico/src/bin/encoders_test.rs", Edition2021) }
+   0.579636322s  INFO prepare_target{force=false package_id=pico v0.1.0 (/home/hamzah/robocup-26/pico) target="encoders_test"}: cargo::core::compiler::fingerprint:     dirty: FsStatusOutdated(StaleItem(ChangedFile { reference: "/home/hamzah/robocup-26/pico/target/thumbv6m-none-eabi/debug/.fingerprint/pico-e03b3d9676c501b4/dep-bin-encoders_test", reference_mtime: FileTime { seconds: 1773618336, nanos: 798917129 }, stale: "/home/hamzah/robocup-26/pico/src/bin/encoders_test.rs", stale_mtime: FileTime { seconds: 1773618687, nanos: 263778409 } }))
+   0.581733855s  INFO prepare_target{force=false package_id=pico v0.1.0 (/home/hamzah/robocup-26/pico) target="encoders_test"}: cargo::core::compiler::fingerprint: fingerprint error for pico v0.1.0 (/home/hamzah/robocup-26/pico)/Check { test: true }/TargetInner { name: "encoders_test", doc: true, ..: with_path("/home/hamzah/robocup-26/pico/src/bin/encoders_test.rs", Edition2021) }
+   0.581753295s  INFO prepare_target{force=false package_id=pico v0.1.0 (/home/hamzah/robocup-26/pico) target="encoders_test"}: cargo::core::compiler::fingerprint:     err: failed to read `/home/hamzah/robocup-26/pico/target/thumbv6m-none-eabi/debug/.fingerprint/pico-3ef659ed7118b2a3/test-bin-encoders_test`
+
+Caused by:
+    No such file or directory (os error 2)
+
+Stack backtrace:
+   0: cargo_util::paths::read_bytes
+   1: cargo_util::paths::read
+   2: cargo::core::compiler::fingerprint::_compare_old_fingerprint
+   3: cargo::core::compiler::fingerprint::prepare_target
+   4: cargo::core::compiler::compile
+   5: <cargo::core::compiler::build_runner::BuildRunner>::compile
+   6: cargo::ops::cargo_compile::compile_ws
+   7: cargo::ops::cargo_compile::compile_with_exec
+   8: cargo::ops::cargo_compile::compile
+   9: cargo::commands::check::exec
+  10: <cargo::cli::Exec>::exec
+  11: cargo::main
+  12: std::sys::backtrace::__rust_begin_short_backtrace::<fn(), ()>
+  13: std::rt::lang_start::<()>::{closure#0}
+  14: core::ops::function::impls::<impl core::ops::function::FnOnce<A> for &F>::call_once
+             at /rustc/160e7623e8cbbf1feab2b6e2a24733a98c7bde9c/library/core/src/ops/function.rs:290:21
+  15: std::panicking::catch_unwind::do_call
+             at /rustc/160e7623e8cbbf1feab2b6e2a24733a98c7bde9c/library/std/src/panicking.rs:590:40
+  16: std::panicking::catch_unwind
+             at /rustc/160e7623e8cbbf1feab2b6e2a24733a98c7bde9c/library/std/src/panicking.rs:553:19
+  17: std::panic::catch_unwind
+             at /rustc/160e7623e8cbbf1feab2b6e2a24733a98c7bde9c/library/std/src/panic.rs:359:14
+  18: std::rt::lang_start_internal::{{closure}}
+             at /rustc/160e7623e8cbbf1feab2b6e2a24733a98c7bde9c/library/std/src/rt.rs:175:24
+  19: std::panicking::catch_unwind::do_call
+             at /rustc/160e7623e8cbbf1feab2b6e2a24733a98c7bde9c/library/std/src/panicking.rs:590:40
+  20: std::panicking::catch_unwind
+             at /rustc/160e7623e8cbbf1feab2b6e2a24733a98c7bde9c/library/std/src/panicking.rs:553:19
+  21: std::panic::catch_unwind
+             at /rustc/160e7623e8cbbf1feab2b6e2a24733a98c7bde9c/library/std/src/panic.rs:359:14
+  22: std::rt::lang_start_internal
+             at /rustc/160e7623e8cbbf1feab2b6e2a24733a98c7bde9c/library/std/src/rt.rs:171:5
+  23: main
+  24: __libc_start_call_main
+  25: __libc_start_main_impl
+  26: <unknown>
+   0.583708902s  INFO prepare_target{force=false package_id=pico v0.1.0 (/home/hamzah/robocup-26/pico) target="pico"}: cargo::core::compiler::fingerprint: fingerprint error for pico v0.1.0 (/home/hamzah/robocup-26/pico)/Check { test: true }/TargetInner { name: "pico", doc: true, ..: with_path("/home/hamzah/robocup-26/pico/src/main.rs", Edition2021) }
+   0.583723289s  INFO prepare_target{force=false package_id=pico v0.1.0 (/home/hamzah/robocup-26/pico) target="pico"}: cargo::core::compiler::fingerprint:     err: failed to read `/home/hamzah/robocup-26/pico/target/thumbv6m-none-eabi/debug/.fingerprint/pico-70440d07c2909839/test-bin-pico`
 
 Caused by:
     No such file or directory (os error 2)
@@ -42,4 +133,7 @@ Stack backtrace:
   25: __libc_start_main_impl
   26: <unknown>
     Checking pico v0.1.0 (/home/hamzah/robocup-26/pico)
+error: could not compile `pico` (bin "blink" test) due to 1 previous error
+warning: build failed, waiting for other jobs to finish...
+error: could not compile `pico` (bin "encoders_test" test) due to 1 previous error; 1 warning emitted
 error: could not compile `pico` (bin "pico" test) due to 1 previous error

@@ -175,7 +175,6 @@ async fn main(spawner: Spawner) {
     let mut config = Config::new(0xc0de, 0xcafe);
     config.manufacturer = Some("High Scorers");
     config.product = Some("USB Motor Controller");
-    config.serial_number = Some("RC-67");
     config.max_power = 100;
     config.max_packet_size_0 = 64;
 
