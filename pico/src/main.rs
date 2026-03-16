@@ -13,10 +13,12 @@ use cobs::{CobsDecoder, CobsEncoder};
 use embassy_executor::Spawner;
 use embassy_futures::join::join;
 use embassy_rp::bind_interrupts;
-use embassy_rp::gpio::{Input, Level, Output, Pull};
-use embassy_rp::peripherals::USB;
+use embassy_rp::gpio::{Level, Output};
+use embassy_rp::peripherals::{PIO0, USB};
+use embassy_rp::pio::Pio;
+use embassy_rp::pio_programs::rotary_encoder::{Direction, PioEncoder, PioEncoderProgram};
 use embassy_rp::pwm::Pwm;
-use embassy_rp::usb::{Driver, Instance, InterruptHandler};
+use embassy_rp::usb::{Driver, Instance};
 use embassy_rp::watchdog::Watchdog;
 use embassy_sync::blocking_mutex::raw::CriticalSectionRawMutex;
 use embassy_sync::signal::Signal;
@@ -31,15 +33,16 @@ use {defmt_rtt as _, panic_probe as _};
 mod motor;
 
 bind_interrupts!(struct Irqs {
-    USBCTRL_IRQ => InterruptHandler<USB>;
+    PIO0_IRQ_0 => embassy_rp::pio::InterruptHandler<PIO0>;
+    USBCTRL_IRQ => embassy_rp::usb::InterruptHandler<USB>;
 });
 
 static CONTROL_SIGNAL: Signal<CriticalSectionRawMutex, i32> = Signal::new();
 
-static ODOM_SIGNAL_FL: Signal<CriticalSectionRawMutex, u32> = Signal::new();
-static ODOM_SIGNAL_FR: Signal<CriticalSectionRawMutex, u32> = Signal::new();
-static ODOM_SIGNAL_RL: Signal<CriticalSectionRawMutex, u32> = Signal::new();
-static ODOM_SIGNAL_RR: Signal<CriticalSectionRawMutex, u32> = Signal::new();
+static ODOM_SIGNAL_FL: Signal<CriticalSectionRawMutex, i32> = Signal::new();
+static ODOM_SIGNAL_FR: Signal<CriticalSectionRawMutex, i32> = Signal::new();
+static ODOM_SIGNAL_RL: Signal<CriticalSectionRawMutex, i32> = Signal::new();
+static ODOM_SIGNAL_RR: Signal<CriticalSectionRawMutex, i32> = Signal::new();
 
 const PULSES_PER_MM: f32 = 2520.0 / (48.0 * TAU);
 
@@ -58,18 +61,20 @@ async fn led_task(mut led: Output<'static>) {
     }
 }
 
-#[embassy_executor::task]
-async fn odom_task(
-    mut odom_pin: Input<'static>,
-    signal: &'static Signal<CriticalSectionRawMutex, u32>,
-) {
-    let mut odom: u32 = 0;
-
-    loop {
-        odom_pin.wait_for_any_edge().await;
-        odom += 1;
-        signal.signal(odom);
-    }
+macro_rules! odom_task {
+    ($name:ident, $pin:ty) => {
+        #[embassy_executor::task]
+        async fn $name(mut encoder: $pin, signal: &'static Signal<CriticalSectionRawMutex, i32>) {
+            let mut count: i32 = 0;
+            loop {
+                count += match encoder.read().await {
+                    Direction::Clockwise => 1,
+                    Direction::CounterClockwise => -1,
+                };
+                signal.signal(count);
+            }
+        }
+    };
 }
 
 #[embassy_executor::task]
@@ -122,17 +127,37 @@ async fn main(spawner: Spawner) {
     let led = Output::new(p.PIN_25, Level::Low);
     spawner.spawn(led_task(led)).unwrap();
 
+    let Pio {
+        mut common,
+        sm0,
+        sm1,
+        sm2,
+        sm3,
+        ..
+    } = Pio::new(p.PIO0, Irqs);
+
+    let prg = PioEncoderProgram::new(&mut common);
+    let encoder0 = PioEncoder::new(&mut common, sm0, p.PIN_11, p.PIN_12, &prg);
+    let encoder1 = PioEncoder::new(&mut common, sm1, p.PIN_19, p.PIN_20, &prg);
+    let encoder2 = PioEncoder::new(&mut common, sm2, p.PIN_13, p.PIN_14, &prg);
+    let encoder3 = PioEncoder::new(&mut common, sm3, p.PIN_21, p.PIN_22, &prg);
+
+    odom_task!(odom_task_0, PioEncoder<'static, PIO0, 0>);
+    odom_task!(odom_task_1, PioEncoder<'static, PIO0, 1>);
+    odom_task!(odom_task_2, PioEncoder<'static, PIO0, 2>);
+    odom_task!(odom_task_3, PioEncoder<'static, PIO0, 3>);
+
     spawner
-        .spawn(odom_task(Input::new(p.PIN_11, Pull::Up), &ODOM_SIGNAL_FL))
+        .spawn(odom_task_0(encoder0, &ODOM_SIGNAL_FL))
         .unwrap();
     spawner
-        .spawn(odom_task(Input::new(p.PIN_13, Pull::Up), &ODOM_SIGNAL_RL))
+        .spawn(odom_task_1(encoder1, &ODOM_SIGNAL_RL))
         .unwrap();
     spawner
-        .spawn(odom_task(Input::new(p.PIN_21, Pull::Up), &ODOM_SIGNAL_RR))
+        .spawn(odom_task_2(encoder2, &ODOM_SIGNAL_RR))
         .unwrap();
     spawner
-        .spawn(odom_task(Input::new(p.PIN_19, Pull::Up), &ODOM_SIGNAL_FR))
+        .spawn(odom_task_3(encoder3, &ODOM_SIGNAL_FR))
         .unwrap();
 
     spawner

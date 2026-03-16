@@ -37,7 +37,7 @@ pub struct MotorFeedback {
     /// target speed in pulses/s
     pub target: i32,
     last_instant: Instant,
-    last_odom: u32,
+    last_odom: i32,
 }
 
 impl MotorFeedback {
@@ -56,8 +56,8 @@ impl MotorFeedback {
     }
 
     /// Call at 20Hz
-    pub fn update(&mut self, odom: u32) {
-        let odom_diff = odom - self.last_odom;
+    pub fn update(&mut self, odom: i32) {
+        let odom_diff = odom - self.last_odom; // This is a signed integer for direction
         let elapsed = self.last_instant.elapsed();
         self.last_instant = Instant::now();
         self.last_odom = odom;
@@ -73,11 +73,7 @@ impl MotorFeedback {
         }
 
         // Pulses / s
-        let mut speed = (odom_diff as i32 * 1000) / elapsed.as_millis() as i32;
-
-        if self.target < 0 {
-            speed *= -1;
-        }
+        let speed = (odom_diff * 1000) / elapsed.as_millis() as i32;
 
         let control = self.pid.next_control_output(speed as f32);
 

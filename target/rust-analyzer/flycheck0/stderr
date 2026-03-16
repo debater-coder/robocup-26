@@ -1,5 +1,5 @@
-   0.559096439s  INFO prepare_target{force=false package_id=pico v0.1.0 (/home/hamzah/robocup-26/pico) target="blink"}: cargo::core::compiler::fingerprint: fingerprint error for pico v0.1.0 (/home/hamzah/robocup-26/pico)/Check { test: true }/TargetInner { name: "blink", doc: true, ..: with_path("/home/hamzah/robocup-26/pico/src/bin/blink.rs", Edition2021) }
-   0.559142271s  INFO prepare_target{force=false package_id=pico v0.1.0 (/home/hamzah/robocup-26/pico) target="blink"}: cargo::core::compiler::fingerprint:     err: failed to read `/home/hamzah/robocup-26/pico/target/thumbv6m-none-eabi/debug/.fingerprint/pico-869babd61a1e56df/test-bin-blink`
+   0.216748292s  INFO prepare_target{force=false package_id=pico v0.1.0 (/home/hamzah/robocup-26/pico) target="blink"}: cargo::core::compiler::fingerprint: fingerprint error for pico v0.1.0 (/home/hamzah/robocup-26/pico)/Check { test: true }/TargetInner { name: "blink", doc: true, ..: with_path("/home/hamzah/robocup-26/pico/src/bin/blink.rs", Edition2021) }
+   0.216805228s  INFO prepare_target{force=false package_id=pico v0.1.0 (/home/hamzah/robocup-26/pico) target="blink"}: cargo::core::compiler::fingerprint:     err: failed to read `/home/hamzah/robocup-26/pico/target/thumbv6m-none-eabi/debug/.fingerprint/pico-869babd61a1e56df/test-bin-blink`
 
 Caused by:
     No such file or directory (os error 2)
@@ -41,13 +41,8 @@ Stack backtrace:
   24: __libc_start_call_main
   25: __libc_start_main_impl
   26: <unknown>
-   0.579461053s  INFO prepare_target{force=false package_id=pico v0.1.0 (/home/hamzah/robocup-26/pico) target="encoders_test"}: cargo::core::compiler::fingerprint: stale: changed "/home/hamzah/robocup-26/pico/src/bin/encoders_test.rs"
-   0.579484689s  INFO prepare_target{force=false package_id=pico v0.1.0 (/home/hamzah/robocup-26/pico) target="encoders_test"}: cargo::core::compiler::fingerprint:           (vs) "/home/hamzah/robocup-26/pico/target/thumbv6m-none-eabi/debug/.fingerprint/pico-e03b3d9676c501b4/dep-bin-encoders_test"
-   0.579492510s  INFO prepare_target{force=false package_id=pico v0.1.0 (/home/hamzah/robocup-26/pico) target="encoders_test"}: cargo::core::compiler::fingerprint:                FileTime { seconds: 1773618336, nanos: 798917129 } < FileTime { seconds: 1773618687, nanos: 263778409 }
-   0.579612974s  INFO prepare_target{force=false package_id=pico v0.1.0 (/home/hamzah/robocup-26/pico) target="encoders_test"}: cargo::core::compiler::fingerprint: fingerprint dirty for pico v0.1.0 (/home/hamzah/robocup-26/pico)/Check { test: false }/TargetInner { name: "encoders_test", doc: true, ..: with_path("/home/hamzah/robocup-26/pico/src/bin/encoders_test.rs", Edition2021) }
-   0.579636322s  INFO prepare_target{force=false package_id=pico v0.1.0 (/home/hamzah/robocup-26/pico) target="encoders_test"}: cargo::core::compiler::fingerprint:     dirty: FsStatusOutdated(StaleItem(ChangedFile { reference: "/home/hamzah/robocup-26/pico/target/thumbv6m-none-eabi/debug/.fingerprint/pico-e03b3d9676c501b4/dep-bin-encoders_test", reference_mtime: FileTime { seconds: 1773618336, nanos: 798917129 }, stale: "/home/hamzah/robocup-26/pico/src/bin/encoders_test.rs", stale_mtime: FileTime { seconds: 1773618687, nanos: 263778409 } }))
-   0.581733855s  INFO prepare_target{force=false package_id=pico v0.1.0 (/home/hamzah/robocup-26/pico) target="encoders_test"}: cargo::core::compiler::fingerprint: fingerprint error for pico v0.1.0 (/home/hamzah/robocup-26/pico)/Check { test: true }/TargetInner { name: "encoders_test", doc: true, ..: with_path("/home/hamzah/robocup-26/pico/src/bin/encoders_test.rs", Edition2021) }
-   0.581753295s  INFO prepare_target{force=false package_id=pico v0.1.0 (/home/hamzah/robocup-26/pico) target="encoders_test"}: cargo::core::compiler::fingerprint:     err: failed to read `/home/hamzah/robocup-26/pico/target/thumbv6m-none-eabi/debug/.fingerprint/pico-3ef659ed7118b2a3/test-bin-encoders_test`
+   0.233028762s  INFO prepare_target{force=false package_id=pico v0.1.0 (/home/hamzah/robocup-26/pico) target="encoders_test"}: cargo::core::compiler::fingerprint: fingerprint error for pico v0.1.0 (/home/hamzah/robocup-26/pico)/Check { test: true }/TargetInner { name: "encoders_test", doc: true, ..: with_path("/home/hamzah/robocup-26/pico/src/bin/encoders_test.rs", Edition2021) }
+   0.233056426s  INFO prepare_target{force=false package_id=pico v0.1.0 (/home/hamzah/robocup-26/pico) target="encoders_test"}: cargo::core::compiler::fingerprint:     err: failed to read `/home/hamzah/robocup-26/pico/target/thumbv6m-none-eabi/debug/.fingerprint/pico-3ef659ed7118b2a3/test-bin-encoders_test`
 
 Caused by:
     No such file or directory (os error 2)
@@ -89,8 +84,13 @@ Stack backtrace:
   24: __libc_start_call_main
   25: __libc_start_main_impl
   26: <unknown>
-   0.583708902s  INFO prepare_target{force=false package_id=pico v0.1.0 (/home/hamzah/robocup-26/pico) target="pico"}: cargo::core::compiler::fingerprint: fingerprint error for pico v0.1.0 (/home/hamzah/robocup-26/pico)/Check { test: true }/TargetInner { name: "pico", doc: true, ..: with_path("/home/hamzah/robocup-26/pico/src/main.rs", Edition2021) }
-   0.583723289s  INFO prepare_target{force=false package_id=pico v0.1.0 (/home/hamzah/robocup-26/pico) target="pico"}: cargo::core::compiler::fingerprint:     err: failed to read `/home/hamzah/robocup-26/pico/target/thumbv6m-none-eabi/debug/.fingerprint/pico-70440d07c2909839/test-bin-pico`
+   0.234479838s  INFO prepare_target{force=false package_id=pico v0.1.0 (/home/hamzah/robocup-26/pico) target="pico"}: cargo::core::compiler::fingerprint: stale: changed "/home/hamzah/robocup-26/pico/src/main.rs"
+   0.234488940s  INFO prepare_target{force=false package_id=pico v0.1.0 (/home/hamzah/robocup-26/pico) target="pico"}: cargo::core::compiler::fingerprint:           (vs) "/home/hamzah/robocup-26/pico/target/thumbv6m-none-eabi/debug/.fingerprint/pico-6deac2c71b899a17/dep-bin-pico"
+   0.234494058s  INFO prepare_target{force=false package_id=pico v0.1.0 (/home/hamzah/robocup-26/pico) target="pico"}: cargo::core::compiler::fingerprint:                FileTime { seconds: 1773619682, nanos: 172062273 } < FileTime { seconds: 1773619698, nanos: 631149685 }
+   0.234570203s  INFO prepare_target{force=false package_id=pico v0.1.0 (/home/hamzah/robocup-26/pico) target="pico"}: cargo::core::compiler::fingerprint: fingerprint dirty for pico v0.1.0 (/home/hamzah/robocup-26/pico)/Check { test: false }/TargetInner { name: "pico", doc: true, ..: with_path("/home/hamzah/robocup-26/pico/src/main.rs", Edition2021) }
+   0.234579854s  INFO prepare_target{force=false package_id=pico v0.1.0 (/home/hamzah/robocup-26/pico) target="pico"}: cargo::core::compiler::fingerprint:     dirty: FsStatusOutdated(StaleItem(ChangedFile { reference: "/home/hamzah/robocup-26/pico/target/thumbv6m-none-eabi/debug/.fingerprint/pico-6deac2c71b899a17/dep-bin-pico", reference_mtime: FileTime { seconds: 1773619682, nanos: 172062273 }, stale: "/home/hamzah/robocup-26/pico/src/main.rs", stale_mtime: FileTime { seconds: 1773619698, nanos: 631149685 } }))
+   0.235888242s  INFO prepare_target{force=false package_id=pico v0.1.0 (/home/hamzah/robocup-26/pico) target="pico"}: cargo::core::compiler::fingerprint: fingerprint error for pico v0.1.0 (/home/hamzah/robocup-26/pico)/Check { test: true }/TargetInner { name: "pico", doc: true, ..: with_path("/home/hamzah/robocup-26/pico/src/main.rs", Edition2021) }
+   0.235900996s  INFO prepare_target{force=false package_id=pico v0.1.0 (/home/hamzah/robocup-26/pico) target="pico"}: cargo::core::compiler::fingerprint:     err: failed to read `/home/hamzah/robocup-26/pico/target/thumbv6m-none-eabi/debug/.fingerprint/pico-70440d07c2909839/test-bin-pico`
 
 Caused by:
     No such file or directory (os error 2)
