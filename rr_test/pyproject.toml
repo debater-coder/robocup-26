@@ -1,0 +1,9 @@
+[project]
+name = "rr-test"
+version = "0.1.0"
+description = "Add your description here"
+readme = "README.md"
+requires-python = ">=3.10"
+dependencies = [
+    "rerun-sdk>=0.31.1",
+]
