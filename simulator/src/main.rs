@@ -7,7 +7,7 @@
 //!
 //! # Lifecycle
 //!
-//! Robots first register themselves at /session/register, which also returns the current world state.
+//! Robots first register themselves at /session/register.
 
 use std::{sync::Arc, time::Duration};
 
@@ -83,7 +83,9 @@ async fn session_register(
 // TODO
 async fn session_delete() {}
 
-async fn world_start() {}
+async fn world_start(State(state): State<Arc<GameState>>) {
+    state.world_start().await;
+}
 
 async fn world_tick() {}
 async fn robot_command() {}
@@ -98,7 +100,7 @@ async fn main() -> anyhow::Result<()> {
         .init()?;
 
     let state = Arc::new(GameState::new(
-        Team::Cyan,
+        Team::Yellow,
         Duration::from_mins(10),
         rec.clone(),
     ));
