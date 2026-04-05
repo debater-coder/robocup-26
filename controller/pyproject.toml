@@ -7,10 +7,12 @@ requires-python = ">=3.10"
 dependencies = [
     "cobs>=1.2.2",
     "numpy>=2.2.6",
+    "py-trees>=2.4.0",
     "pyserial>=3.5",
     "rerun-sdk>=0.31.1",
 ]
 
 [[tool.uv.index]]
 name = "piwheels"
-url = "https://www.piwheels.org/simple"
+url = "https://piwheels.org/simple"
+explicit = true
