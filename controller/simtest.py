@@ -35,7 +35,6 @@ while True:
     world = requests.get(
         f"{base_url}/world/tick", params={"tick": tick, "robot_id": robot_id}
     ).json()
-    print("--------\nworld:", world)
 
     command = None
 
@@ -49,7 +48,6 @@ while True:
         vel = world_to_local(vel, np.array(world["self"]["pose"]["rotation"]))
 
         command = {"vx": vel[0], "vy": vel[1], "omega": 0}
-        print("command", command)
 
     requests.post(
         f"{base_url}/robot/command",

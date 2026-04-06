@@ -2,6 +2,7 @@ use std::{
     collections::HashMap,
     f32::consts::PI,
     fmt::Display,
+    process,
     time::{Duration, Instant},
 };
 
@@ -70,11 +71,12 @@ impl GameState {
 
         let (tx, rx) = watch::channel(None);
 
+        let game_length = Tick::from_sim_time(&physics_state, game_length);
         GameState {
             inner: Mutex::new(GameStateInner {
                 tick: Tick(0),
                 score: Default::default(),
-                game_length: Tick::from_sim_time(&physics_state, game_length),
+                game_length,
                 sessions: HashMap::new(),
                 tick_state: TickState {
                     current_tick: Tick(0),
@@ -198,6 +200,11 @@ impl GameState {
 
         inner.tick.0 += 1;
 
+        if inner.tick >= inner.game_length {
+            let _ = self.rec.flush_blocking();
+            process::exit(0);
+        }
+
         inner.tick_state = TickState {
             current_tick: inner.tick,
             commands_received: HashMap::new(),
@@ -210,6 +217,7 @@ impl GameState {
             .set_time("sim_time", inner.tick.to_sim_time(&inner.physics_state));
         self.rec.set_time_sequence("tick", inner.tick.0);
 
+        let elapsed = inner.tick.to_sim_time(&inner.physics_state);
         self.rec
             .log(
                 "/sim/status",
@@ -219,8 +227,13 @@ impl GameState {
 | ---                | ---    |
 | **Cyan score**     | {}     |
 | **Yellow score**   | {}     |
+| **Game clock**     | {}:{}     |
             "#,
-                    inner.phase, inner.score.cyan, inner.score.yellow
+                    inner.phase,
+                    inner.score.cyan,
+                    inner.score.yellow,
+                    elapsed.as_secs() / 60,
+                    elapsed.as_secs() % 60
                 )),
             )
             .unwrap();
