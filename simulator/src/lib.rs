@@ -1,5 +1,6 @@
 use std::{
     collections::HashMap,
+    f32::consts::PI,
     fmt::Display,
     time::{Duration, Instant},
 };
@@ -329,6 +330,20 @@ impl GameState {
         rec.set_duration_secs("sim_time", 0);
         rec.set_time_sequence("tick", 0);
 
+        rec.log(
+            "/sim/field/asset",
+            &rerun::Transform3D::from_translation([0., 0., -0.1]),
+        )
+        .unwrap();
+        rec.log(
+            "/sim/field/asset",
+            &rerun::Asset3D::from_file_contents(
+                include_bytes!("./field.glb").to_vec(),
+                Some(MediaType::glb()),
+            ),
+        )
+        .unwrap();
+
         let mut physics_state = PhysicsState::new(rec.clone());
         let timestep = physics_state.timestep();
 
@@ -416,18 +431,23 @@ impl GameState {
             Team::Yellow => 1.,
         };
 
+        let (kickoff_direction, non_kickoff_direction) = match kickoff_team {
+            Team::Cyan => (0., PI),
+            Team::Yellow => (PI, 0.),
+        };
+
         let non_kickoff_side = -kickoff_side;
 
         // Position kicking off team
         if let Some(rb) = inner.robot_rb_mut(kickoff_team, 0) {
             rb.set_position(
-                Isometry2::new(vector![kickoff_side * 0.2, 0.], 0.).into(),
+                Isometry2::new(vector![kickoff_side * 0.2, 0.], kickoff_direction).into(),
                 true,
             );
         }
         if let Some(rb) = inner.robot_rb_mut(kickoff_team, 1) {
             rb.set_position(
-                Isometry2::new(vector![kickoff_side * 0.615, 0.], 0.).into(),
+                Isometry2::new(vector![kickoff_side * 0.615, 0.], kickoff_direction).into(),
                 true,
             );
         }
@@ -435,13 +455,21 @@ impl GameState {
         // Position other side
         if let Some(rb) = inner.robot_rb_mut(non_kickoff, 0) {
             rb.set_position(
-                Isometry2::new(vector![non_kickoff_side * 0.615, 0.34], 0.).into(),
+                Isometry2::new(
+                    vector![non_kickoff_side * 0.615, 0.34],
+                    non_kickoff_direction,
+                )
+                .into(),
                 true,
             );
         }
         if let Some(rb) = inner.robot_rb_mut(non_kickoff, 1) {
             rb.set_position(
-                Isometry2::new(vector![non_kickoff_side * 0.615, -0.34], 0.).into(),
+                Isometry2::new(
+                    vector![non_kickoff_side * 0.615, -0.34],
+                    non_kickoff_direction,
+                )
+                .into(),
                 true,
             );
         }
@@ -469,18 +497,31 @@ impl GameState {
                 .physics_state
                 .get_rb(robot.rigid_body)
                 .unwrap()
-                .translation();
+                .position();
 
             self.rec
                 .log(
                     format!("/sim/robots/{}", robot_id),
                     &rerun::Cylinders3D::from_lengths_and_radii([0.22], [0.11])
-                        .with_centers([(pos.x, pos.y, 0.11)])
+                        .with_centers([(pos.translation.x, pos.translation.y, 0.11)])
                         .with_colors([match robot.team {
                             Team::Cyan => (0, 255, 255),
                             Team::Yellow => (255, 255, 0),
                         }])
                         .with_fill_mode(FillMode::Solid),
+                )
+                .unwrap();
+
+            self.rec
+                .log(
+                    format!("/sim/robots/{}", robot_id),
+                    &rerun::Arrows3D::from_vectors([(
+                        pos.rotation.re * 0.2,
+                        pos.rotation.im * 0.2,
+                        0.,
+                    )])
+                    .with_origins([(pos.translation.x, pos.translation.y, 0.11)])
+                    .with_radii([0.01]),
                 )
                 .unwrap();
         }

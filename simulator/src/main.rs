@@ -36,7 +36,7 @@ use axum::{
 use clap::Parser as _;
 use rerun::{
     MediaType,
-    external::{anyhow, log, urdf_rs::Robot},
+    external::{anyhow, log},
 };
 use serde::{Deserialize, Serialize};
 use serde_json::json;
@@ -205,20 +205,6 @@ async fn robot_command() {}
 async fn main() -> anyhow::Result<()> {
     let cli = Cli::parse();
     let (rec, _) = cli.rerun.init("robocup-sim")?;
-
-    rec.log(
-        "/sim/field/asset",
-        &rerun::Transform3D::from_translation([0., 0., -0.1]),
-    )
-    .unwrap();
-    rec.log(
-        "/sim/field/asset",
-        &rerun::Asset3D::from_file_contents(
-            include_bytes!("./field.glb").to_vec(),
-            Some(MediaType::glb()),
-        ),
-    )
-    .unwrap();
 
     rerun::Logger::new(rec.clone())
         .with_path_prefix("/sim/log")
