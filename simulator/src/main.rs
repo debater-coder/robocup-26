@@ -106,7 +106,7 @@ async fn session_register(
 async fn session_delete() {}
 
 async fn world_start(State(state): State<Arc<GameState>>) {
-    state.world_start().await;
+    state.world_start(Team::Cyan).await;
 }
 
 #[derive(Debug, Deserialize)]
@@ -245,11 +245,7 @@ async fn main() -> anyhow::Result<()> {
         .with_path_prefix("/sim/log")
         .init()?;
 
-    let state = Arc::new(GameState::new(
-        Team::Yellow,
-        Duration::from_mins(10),
-        rec.clone(),
-    ));
+    let state = Arc::new(GameState::new(Duration::from_mins(10), rec.clone()));
 
     let app = Router::new()
         .route("/session/register", post(session_register))
