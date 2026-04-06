@@ -219,6 +219,9 @@ impl Tick {
 
 impl PhysicsState {
     fn new(rec: RecordingStream) -> Self {
+        let mut rigid_body_set = RigidBodySet::new();
+        let mut collider_set = ColliderSet::new();
+
         rec.log(
             "/sim/field",
             &rerun::Boxes3D::from_centers_and_sizes([(0., 0., 0.11)], [(2.43, 1.82, 0.22)])
@@ -226,21 +229,31 @@ impl PhysicsState {
         )
         .unwrap();
 
+        let positions: [(f32, f32); 4] = [
+            (2.43 / 2. + 0.1, 0.),
+            (-(2.43 / 2. + 0.1), 0.),
+            (0., 1.82 / 2. + 0.1),
+            (0., -(1.82 / 2. + 0.1)),
+        ];
+
+        let sizes = [(0.2, 1.82), (0.2, 1.82), (2.43, 0.2), (2.43, 0.2)];
+
+        for (position, size) in positions.iter().zip(sizes.iter()) {
+            let rb = RigidBodyBuilder::fixed()
+                .translation(Vector::from(position.clone()))
+                .build();
+            let rb = rigid_body_set.insert(rb);
+
+            let collider = ColliderBuilder::cuboid(size.0 / 2., size.1 / 2.).build();
+
+            collider_set.insert_with_parent(collider, rb, &mut rigid_body_set);
+        }
+
         rec.log(
             "/sim/field/walls",
             &rerun::Boxes3D::from_centers_and_sizes(
-                [
-                    (2.43 / 2. + 0.1, 0., 0.11),
-                    (-(2.43 / 2. + 0.1), 0., 0.11),
-                    (0., 1.82 / 2. + 0.1, 0.11),
-                    (0., -(1.82 / 2. + 0.1), 0.11),
-                ],
-                [
-                    (0.2, 1.82, 0.22),
-                    (0.2, 1.82, 0.22),
-                    (2.43, 0.2, 0.22),
-                    (2.43, 0.2, 0.22),
-                ],
+                positions.map(|pos| (pos.0, pos.1, 0.11)),
+                sizes.map(|size| (size.0, size.1, 0.22)),
             ),
         )
         .unwrap();
@@ -285,8 +298,8 @@ impl PhysicsState {
             island_manager: IslandManager::new(),
             broad_phase: DefaultBroadPhase::new(),
             narrow_phase: NarrowPhase::new(),
-            rigid_body_set: RigidBodySet::new(),
-            collider_set: ColliderSet::new(),
+            rigid_body_set,
+            collider_set,
             impulse_joint_set: ImpulseJointSet::new(),
             multibody_joint_set: MultibodyJointSet::new(),
             ccd_solver: CCDSolver::new(),
@@ -322,7 +335,10 @@ impl PhysicsState {
     fn spawn_ball(&mut self) -> RigidBodyHandle {
         let rb = RigidBodyBuilder::dynamic().build();
         let rb = self.rigid_body_set.insert(rb);
-        let collider = ColliderBuilder::ball(0.021).mass(0.046).build();
+        let collider = ColliderBuilder::ball(0.021)
+            .mass(0.046)
+            .restitution(0.9)
+            .build();
         self.collider_set
             .insert_with_parent(collider, rb, &mut self.rigid_body_set);
         rb
