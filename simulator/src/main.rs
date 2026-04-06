@@ -38,8 +38,8 @@ use rerun::external::{anyhow, log};
 use serde::{Deserialize, Serialize};
 use serde_json::json;
 use simulator::{
-    GamePhase, GameSnapshot, GameState, RobotSession, RobotStatus, SubscribeGameSnapshotError,
-    Team, Tick,
+    GamePhase, GameSnapshot, GameState, RobotCommand, RobotSession, RobotStatus,
+    SubscribeGameSnapshotError, Team, Tick,
 };
 
 #[derive(Debug, clap::Parser)]
@@ -196,7 +196,45 @@ async fn world_tick(
         }
     }
 }
-async fn robot_command() {}
+
+#[derive(Debug, Deserialize)]
+struct RobotCommandBody {
+    robot_id: String,
+    tick: Tick,
+    command: Option<RobotCommand>,
+}
+
+async fn robot_command(
+    State(state): State<Arc<GameState>>,
+    Json(RobotCommandBody {
+        robot_id,
+        tick,
+        command,
+    }): Json<RobotCommandBody>,
+) -> Response {
+    match state.insert_command(robot_id, tick, command).await {
+        Ok(()) => (
+            StatusCode::OK,
+            Json(json!({
+                "accepted": true,
+                "tick": tick
+            })),
+        )
+            .into_response(),
+        Err(e) => {
+            log::error!("{:?}", e.clone());
+            (
+                match e {
+                    simulator::InsertCommandError::RobotNotFound(_) => StatusCode::NOT_FOUND,
+                    simulator::InsertCommandError::CannotMove
+                    | simulator::InsertCommandError::TickNotCurrent(_) => StatusCode::BAD_REQUEST,
+                },
+                Json(e),
+            )
+                .into_response()
+        }
+    }
+}
 
 #[tokio::main]
 async fn main() -> anyhow::Result<()> {

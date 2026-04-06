@@ -62,6 +62,23 @@ pub enum GamePhase {
     Playing,
 }
 
+impl GamePhase {
+    fn advance(&mut self, current_tick: Tick) {
+        *self = match &self {
+            GamePhase::Kickoff { first_tick } => {
+                // During the last tick, we set the game phase to playing so that clients
+                // can submit their command for the following tick
+                if current_tick.0 >= first_tick.0 + 4 {
+                    GamePhase::Playing
+                } else {
+                    self.clone()
+                }
+            }
+            GamePhase::Playing => GamePhase::Playing,
+        };
+    }
+}
+
 struct PhysicsState {
     integration_parameters: IntegrationParameters,
     island_manager: IslandManager,
@@ -73,6 +90,7 @@ struct PhysicsState {
     multibody_joint_set: MultibodyJointSet,
     ccd_solver: CCDSolver,
     rec: RecordingStream,
+    physics_pipeline: PhysicsPipeline,
 }
 
 #[derive(Debug, Default)]
@@ -116,12 +134,14 @@ impl Display for Tick {
 
 /// Holds pending state for the next tick
 pub struct TickState {
-    pub current_tick: Tick,
+    current_tick: Tick,
     /// Pending commands to be applied to the world for the next tick
-    pub commands_received: HashMap<String, RobotCommand>,
+    /// If robots are unable to move (kickoff or damaged), they must still submit a None
+    /// command to keep robot loop synchronised with sim time.
+    commands_received: HashMap<String, Option<RobotCommand>>,
 }
 
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, Deserialize)]
 pub struct RobotCommand {
     /// (m/s)
     pub vx: f32,
@@ -270,6 +290,7 @@ impl PhysicsState {
             impulse_joint_set: ImpulseJointSet::new(),
             multibody_joint_set: MultibodyJointSet::new(),
             ccd_solver: CCDSolver::new(),
+            physics_pipeline: PhysicsPipeline::new(),
             rec,
         }
     }
@@ -280,10 +301,13 @@ impl PhysicsState {
     }
 
     fn spawn_robot(&mut self) -> RigidBodyHandle {
-        let rb = RigidBodyBuilder::dynamic().build();
+        let rb = RigidBodyBuilder::dynamic()
+            .linear_damping(3.0)
+            .angular_damping(5.0)
+            .build();
         let rb = self.rigid_body_set.insert(rb);
 
-        let collider = ColliderBuilder::ball(0.220).mass(2.5).build();
+        let collider = ColliderBuilder::ball(0.110).mass(2.5).build();
 
         self.collider_set
             .insert_with_parent(collider, rb, &mut self.rigid_body_set);
@@ -307,6 +331,23 @@ impl PhysicsState {
     fn get_rb(&self, rigid_body: RigidBodyHandle) -> Option<&RigidBody> {
         self.rigid_body_set.get(rigid_body)
     }
+
+    fn step(&mut self) {
+        self.physics_pipeline.step(
+            Vector2::ZERO,
+            &self.integration_parameters,
+            &mut self.island_manager,
+            &mut self.broad_phase,
+            &mut self.narrow_phase,
+            &mut self.rigid_body_set,
+            &mut self.collider_set,
+            &mut self.impulse_joint_set,
+            &mut self.multibody_joint_set,
+            &mut self.ccd_solver,
+            &(),
+            &(),
+        );
+    }
 }
 
 #[derive(Error, Debug, Serialize, Clone)]
@@ -323,6 +364,16 @@ pub enum SubscribeGameSnapshotError {
     TickExpired(Tick),
     #[error("simulation channel closed")]
     SimulationClosed,
+}
+
+#[derive(Error, Debug, Serialize, Clone)]
+pub enum InsertCommandError {
+    #[error("tick {0} is not current tick")]
+    TickNotCurrent(Tick),
+    #[error("robot_id {0} not found")]
+    RobotNotFound(String),
+    #[error("moving not allowed")]
+    CannotMove,
 }
 
 impl GameState {
@@ -444,12 +495,14 @@ impl GameState {
                 Isometry2::new(vector![kickoff_side * 0.2, 0.], kickoff_direction).into(),
                 true,
             );
+            rb.set_vels(RigidBodyVelocity::zero(), true);
         }
         if let Some(rb) = inner.robot_rb_mut(kickoff_team, 1) {
             rb.set_position(
                 Isometry2::new(vector![kickoff_side * 0.615, 0.], kickoff_direction).into(),
                 true,
             );
+            rb.set_vels(RigidBodyVelocity::zero(), true);
         }
 
         // Position other side
@@ -462,6 +515,7 @@ impl GameState {
                 .into(),
                 true,
             );
+            rb.set_vels(RigidBodyVelocity::zero(), true);
         }
         if let Some(rb) = inner.robot_rb_mut(non_kickoff, 1) {
             rb.set_position(
@@ -472,6 +526,7 @@ impl GameState {
                 .into(),
                 true,
             );
+            rb.set_vels(RigidBodyVelocity::zero(), true);
         }
     }
 
@@ -487,6 +542,9 @@ impl GameState {
             current_tick: inner.tick,
             commands_received: HashMap::new(),
         };
+
+        let tick = inner.tick;
+        inner.phase.advance(tick);
 
         self.rec
             .set_time("sim_time", inner.tick.to_sim_time(&inner.physics_state));
@@ -567,6 +625,81 @@ impl GameState {
             sessions_snapshot: inner.sessions.clone(),
             current_phase: inner.phase.clone(),
         }));
+    }
+
+    /// Processes a command from the robot process, applying them to the world
+    /// and advancing to the next tick once all commands are received.
+    pub async fn insert_command(
+        &self,
+        robot_id: String,
+        tick: Tick,
+        command: Option<RobotCommand>,
+    ) -> Result<(), InsertCommandError> {
+        // All operations involving the inner lock are within a block to prevent deadlock
+        let should_tick = {
+            let mut inner = self.inner.lock().await;
+
+            if inner.tick_state.current_tick != tick {
+                return Err(InsertCommandError::TickNotCurrent(tick));
+            }
+
+            let Some(session) = inner.sessions.get(&robot_id) else {
+                return Err(InsertCommandError::RobotNotFound(robot_id));
+            };
+
+            if command.is_some()
+                && !(inner.phase == GamePhase::Playing && session.status == RobotStatus::Active)
+            {
+                return Err(InsertCommandError::CannotMove);
+            }
+
+            inner.tick_state.commands_received.insert(robot_id, command);
+
+            if inner
+                .sessions
+                .keys()
+                .all(|key| inner.tick_state.commands_received.contains_key(key))
+            {
+                // All commands now received, apply to physics engine
+                for (robot_id, command) in inner.tick_state.commands_received.clone().iter() {
+                    if let Some(command) = command {
+                        let rb = inner.sessions.get(robot_id).unwrap().rigid_body;
+                        let rb = inner.physics_state.get_rb_mut(rb).unwrap();
+
+                        // Rotate velocity from robot coordinate space into world-space
+                        let vel = rb
+                            .rotation()
+                            .transform_vector(Vec2::new(command.vx, command.vy));
+
+                        self.rec
+                            .log(
+                                format!("/sim/robots/{}/vel", robot_id),
+                                &rerun::Arrows3D::from_vectors([(vel.x, vel.y, 0.)])
+                                    .with_radii([0.01])
+                                    .with_origins([(rb.translation().x, rb.translation().y, 0.)]),
+                            )
+                            .unwrap();
+
+                        rb.apply_impulse(vel * rb.mass(), true);
+                        rb.apply_torque_impulse(command.omega * rb.mass(), true);
+                    }
+                }
+
+                // Run a step of the physics engine
+                inner.physics_state.step();
+
+                // New tick
+                true
+            } else {
+                false
+            }
+        };
+
+        if should_tick {
+            self.tick().await;
+        }
+
+        Ok(())
     }
 
     /// Registers a new robot session. Only works during tick 0.

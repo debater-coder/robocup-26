@@ -9,6 +9,7 @@ dependencies = [
     "numpy>=2.2.6",
     "py-trees>=2.4.0",
     "pyserial>=3.5",
+    "requests>=2.33.1",
     "rerun-sdk>=0.31.1",
 ]
 
