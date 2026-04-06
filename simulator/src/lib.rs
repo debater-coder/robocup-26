@@ -4,20 +4,28 @@ use std::{
     time::{Duration, Instant},
 };
 
-use rapier2d::{
-    na::{Isometry, Isometry2},
-    prelude::*,
-};
+use rapier2d::{na::Isometry2, prelude::*};
 use rerun::{FillMode, RecordingStream, external::log};
 use serde::{Deserialize, Serialize};
 use thiserror::Error;
 use tokio::sync::{Mutex, watch};
 
-pub struct GameSnapshot {}
+#[derive(Debug, Clone)]
+pub struct GameSnapshot {
+    pub tick: Tick,
+    pub sim_time: Duration,
+    pub positions: HashMap<String, Isometry2<f32>>,
+    pub velocity: HashMap<String, RigidBodyVelocity<f32>>,
+    pub ball_position: Isometry2<f32>,
+    pub ball_velocity: RigidBodyVelocity<f32>,
+    pub sessions_snapshot: HashMap<String, RobotSession>,
+    pub current_phase: GamePhase,
+}
 
 pub struct GameState {
     inner: Mutex<GameStateInner>,
-    watch_tx: watch::Sender<Option<GameSnapshot>>,
+    world_tx: watch::Sender<Option<GameSnapshot>>,
+    world_rx: watch::Receiver<Option<GameSnapshot>>,
     pub timestep: Duration,
     rec: RecordingStream,
 }
@@ -31,7 +39,7 @@ pub struct GameStateInner {
     physics_state: PhysicsState,
     pub sessions: HashMap<String, RobotSession>,
     pub tick_state: TickState,
-    phase: GamePhase,
+    pub phase: GamePhase,
     ball: RigidBodyHandle,
 }
 
@@ -43,6 +51,7 @@ impl GameStateInner {
     }
 }
 
+#[derive(Debug, Clone, Serialize, PartialEq, Eq)]
 pub enum GamePhase {
     /// Kickoffs freeze robots in their kickoff positions and last 5 ticks
     Kickoff {
@@ -95,8 +104,14 @@ impl Display for Team {
 /// A tick in simulated time. Every tick, robots submit their commands,
 /// the physics engine runs, and then the world state is queryable by
 /// the robots.
-#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize, PartialOrd, Ord)]
 pub struct Tick(pub u32);
+
+impl Display for Tick {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        write!(f, "tick({})", self.0)
+    }
+}
 
 /// Holds pending state for the next tick
 pub struct TickState {
@@ -105,16 +120,17 @@ pub struct TickState {
     pub commands_received: HashMap<String, RobotCommand>,
 }
 
+#[derive(Debug, Clone)]
 pub struct RobotCommand {
-    /// Velocity forward in robot coordinate frame (m/s)
+    /// (m/s)
     pub vx: f32,
-    /// Velocity left in robot coordinate frame (m/s)
+    /// (m/s)
     pub vy: f32,
-    /// Rotational velocity anticlockwise (rad/s)
+    /// (rad/s)
     pub omega: f32,
 }
 
-#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Deserialize, Serialize)]
 pub enum RobotStatus {
     Active,
     /// Marked as damaged; pending removal from field
@@ -126,7 +142,7 @@ pub enum RobotStatus {
     },
 }
 
-#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Deserialize, Serialize)]
 pub enum DamageReason {
     NotResponding,
     /// Rule 5.7.1.2: Remaining in goal area for more than 20s
@@ -136,20 +152,22 @@ pub enum DamageReason {
     EnteredOutArea,
 }
 
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, Serialize)]
 pub struct RobotSession {
     pub robot_id: String,
     pub team: Team,
     /// Index of robot within the team
     pub robot_index: usize,
+    #[serde(skip)]
     pub registered_at: Instant,
+    #[serde(skip)]
     pub last_seen_at: Instant,
     pub status: RobotStatus,
     pub rigid_body: RigidBodyHandle,
 }
 
 impl RobotSession {
-    fn get_robot_id(team: Team, robot_index: usize) -> String {
+    pub fn get_robot_id(team: Team, robot_index: usize) -> String {
         format!("r_{}_{}", team, robot_index)
     }
 
@@ -298,6 +316,14 @@ pub enum SessionRegisterError {
     RegisterUnavailable,
 }
 
+#[derive(Error, Debug, Serialize, Clone)]
+pub enum SubscribeGameSnapshotError {
+    #[error("tick {0} already passed")]
+    TickExpired(Tick),
+    #[error("simulation channel closed")]
+    SimulationClosed,
+}
+
 impl GameState {
     pub fn new(kickoff: Team, game_length: Duration, rec: RecordingStream) -> Self {
         rec.set_duration_secs("sim_time", 0);
@@ -305,6 +331,8 @@ impl GameState {
 
         let mut physics_state = PhysicsState::new(rec.clone());
         let timestep = physics_state.timestep();
+
+        let (tx, rx) = watch::channel(None);
 
         GameState {
             inner: Mutex::new(GameStateInner {
@@ -323,7 +351,8 @@ impl GameState {
                 ball: physics_state.spawn_ball(),
                 physics_state,
             }),
-            watch_tx: watch::channel(None).0,
+            world_tx: tx,
+            world_rx: rx,
             timestep,
             rec,
         }
@@ -334,6 +363,31 @@ impl GameState {
     pub async fn world_start(&self) {
         self.position_for_kickoff().await;
         self.tick().await;
+    }
+
+    /// Waits for the snapshot for a specific tick is received
+    pub async fn subscribe_to_game_snapshot(
+        &self,
+        tick: Tick,
+    ) -> Result<GameSnapshot, SubscribeGameSnapshotError> {
+        let mut rx = self.world_rx.clone();
+
+        loop {
+            if let Some(snapshot) = rx.borrow_and_update().clone() {
+                match snapshot.tick.cmp(&tick) {
+                    std::cmp::Ordering::Less => {}
+                    std::cmp::Ordering::Equal => return Ok(snapshot),
+                    std::cmp::Ordering::Greater => {
+                        return Err(SubscribeGameSnapshotError::TickExpired(snapshot.tick));
+                    }
+                }
+            };
+
+            match rx.changed().await {
+                Ok(()) => {}
+                Err(_) => return Err(SubscribeGameSnapshotError::SimulationClosed),
+            }
+        }
     }
 
     async fn position_for_kickoff(&self) {
@@ -442,6 +496,36 @@ impl GameState {
                     .with_colors([(255, 165, 0)]),
             )
             .unwrap();
+
+        let ball = inner.ball;
+        let _ = self.world_tx.send(Some(GameSnapshot {
+            tick: inner.tick,
+            sim_time: inner.tick.to_sim_time(&inner.physics_state),
+            positions: inner
+                .sessions
+                .iter()
+                .map(|(k, v)| {
+                    (
+                        k.clone(),
+                        (*inner.physics_state.get_rb(v.rigid_body).unwrap().position()).into(),
+                    )
+                })
+                .collect(),
+            velocity: inner
+                .sessions
+                .iter()
+                .map(|(k, v)| {
+                    (
+                        k.clone(),
+                        *inner.physics_state.get_rb(v.rigid_body).unwrap().vels(),
+                    )
+                })
+                .collect(),
+            ball_position: (*inner.physics_state.get_rb(ball).unwrap().position()).into(),
+            ball_velocity: *inner.physics_state.get_rb(ball).unwrap().vels(),
+            sessions_snapshot: inner.sessions.clone(),
+            current_phase: inner.phase.clone(),
+        }));
     }
 
     /// Registers a new robot session. Only works during tick 0.
