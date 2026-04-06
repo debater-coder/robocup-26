@@ -34,10 +34,7 @@ use axum::{
     routing::{delete, get, post},
 };
 use clap::Parser as _;
-use rerun::{
-    MediaType,
-    external::{anyhow, log},
-};
+use rerun::external::{anyhow, log};
 use serde::{Deserialize, Serialize};
 use serde_json::json;
 use simulator::{

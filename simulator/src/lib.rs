@@ -6,7 +6,7 @@ use std::{
 };
 
 use rapier2d::{na::Isometry2, prelude::*};
-use rerun::{FillMode, RecordingStream, external::log};
+use rerun::{FillMode, MediaType, RecordingStream, external::log};
 use serde::{Deserialize, Serialize};
 use thiserror::Error;
 use tokio::sync::{Mutex, watch};
