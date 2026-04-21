@@ -48,7 +48,7 @@ pub struct GameStateInner {
 }
 
 impl GameState {
-    pub fn new(game_length: Duration, rec: RecordingStream) -> Self {
+    pub fn new(game_length: Duration, kickoff_team: Team, rec: RecordingStream) -> Self {
         rec.set_duration_secs("sim_time", 0);
         rec.set_time_sequence("tick", 0);
 
@@ -84,6 +84,7 @@ impl GameState {
                 },
                 phase: GamePhase::Kickoff {
                     first_tick: Tick(1),
+                    team: kickoff_team,
                 },
                 physics_state,
             }),
@@ -96,8 +97,7 @@ impl GameState {
 
     /// Begin the first tick (tick 1), starting the simulation and thus broadcasting
     /// the initial world state.
-    pub async fn world_start(&self, team: Team) {
-        self.position_for_kickoff(team).await;
+    pub async fn world_start(&self) {
         self.tick().await;
     }
 
@@ -126,72 +126,6 @@ impl GameState {
         }
     }
 
-    async fn position_for_kickoff(&self, kickoff_team: Team) {
-        let mut inner = self.inner.lock().await;
-        log::info!("Positioning for kickoff with team {}", kickoff_team);
-
-        // Center ball
-        inner.physics_state.teleport_ball(Vec2::ZERO);
-
-        // Kickoffs alternate
-        let non_kickoff = match kickoff_team {
-            Team::Cyan => Team::Yellow,
-            Team::Yellow => Team::Cyan,
-        };
-
-        let kickoff_side = match kickoff_team {
-            Team::Cyan => -1.,
-            Team::Yellow => 1.,
-        };
-
-        let (kickoff_direction, non_kickoff_direction) = match kickoff_team {
-            Team::Cyan => (0., PI),
-            Team::Yellow => (PI, 0.),
-        };
-
-        let non_kickoff_side = -kickoff_side;
-
-        // Position kicking off team
-        if let Some(rb) = inner.robot_rb_mut(kickoff_team, 0) {
-            rb.set_position(
-                Isometry2::new(vector![kickoff_side * 0.2, 0.], kickoff_direction).into(),
-                true,
-            );
-            rb.set_vels(RigidBodyVelocity::zero(), true);
-        }
-        if let Some(rb) = inner.robot_rb_mut(kickoff_team, 1) {
-            rb.set_position(
-                Isometry2::new(vector![kickoff_side * 0.615, 0.], kickoff_direction).into(),
-                true,
-            );
-            rb.set_vels(RigidBodyVelocity::zero(), true);
-        }
-
-        // Position other side
-        if let Some(rb) = inner.robot_rb_mut(non_kickoff, 0) {
-            rb.set_position(
-                Isometry2::new(
-                    vector![non_kickoff_side * 0.615, 0.34],
-                    non_kickoff_direction,
-                )
-                .into(),
-                true,
-            );
-            rb.set_vels(RigidBodyVelocity::zero(), true);
-        }
-        if let Some(rb) = inner.robot_rb_mut(non_kickoff, 1) {
-            rb.set_position(
-                Isometry2::new(
-                    vector![non_kickoff_side * 0.615, -0.34],
-                    non_kickoff_direction,
-                )
-                .into(),
-                true,
-            );
-            rb.set_vels(RigidBodyVelocity::zero(), true);
-        }
-    }
-
     /// Advances to next tick, sending the snapshot of the
     /// world on the channel as it is currently. This assumes
     /// all commands are already applied.
@@ -212,6 +146,14 @@ impl GameState {
 
         let tick = inner.tick;
         inner.phase.advance(tick);
+
+        if let GamePhase::Kickoff {
+            first_tick: _,
+            team,
+        } = inner.phase
+        {
+            inner.position_for_kickoff(team).await;
+        }
 
         self.rec
             .set_time("sim_time", inner.tick.to_sim_time(&inner.physics_state));
@@ -239,11 +181,8 @@ impl GameState {
             .unwrap();
 
         for (robot_id, robot) in inner.sessions.iter() {
-            let pos = inner
-                .physics_state
-                .get_rb(robot.rigid_body)
-                .unwrap()
-                .position();
+            let rb = inner.physics_state.get_rb(robot.rigid_body).unwrap();
+            let pos = rb.position();
 
             self.rec
                 .log(
@@ -268,6 +207,15 @@ impl GameState {
                     )])
                     .with_origins([(pos.translation.x, pos.translation.y, 0.11)])
                     .with_radii([0.01]),
+                )
+                .unwrap();
+
+            self.rec
+                .log(
+                    format!("/sim/robots/{}/vel", robot_id),
+                    &rerun::Arrows3D::from_vectors([(rb.linvel().x, rb.linvel().y, 0.)])
+                        .with_radii([0.01])
+                        .with_origins([(rb.translation().x, rb.translation().y, 0.)]),
                 )
                 .unwrap();
         }
@@ -322,7 +270,7 @@ impl GameState {
         command: Option<RobotCommand>,
     ) -> Result<(), InsertCommandError> {
         // All operations involving the inner lock are within a block to prevent deadlock
-        let (should_tick, goal_scored) = {
+        let should_tick = {
             let mut inner = self.inner.lock().await;
 
             if inner.tick_state.current_tick != tick {
@@ -359,15 +307,38 @@ impl GameState {
 
                         self.rec
                             .log(
-                                format!("/sim/robots/{}/vel", robot_id),
+                                format!("/sim/robots/{}/command_vel", robot_id),
                                 &rerun::Arrows3D::from_vectors([(vel.x, vel.y, 0.)])
                                     .with_radii([0.01])
                                     .with_origins([(rb.translation().x, rb.translation().y, 0.)]),
                             )
                             .unwrap();
 
-                        rb.apply_impulse(vel * rb.mass(), true);
-                        rb.apply_torque_impulse(command.omega * rb.mass(), true);
+                        let curr_vel = rb.linvel();
+                        let curr_omega = rb.angvel();
+
+                        let force = ((vel - curr_vel) * 0.01).clamp_length_max(4.);
+                        let torque = ((command.omega - curr_omega) * 0.01).clamp(-2., 2.);
+                        self.rec
+                            .log(
+                                format!("/sim/robots/{}/applied_force", robot_id),
+                                &rerun::Arrows3D::from_vectors([(
+                                    force.x * 50.,
+                                    force.y * 50.,
+                                    0.,
+                                )])
+                                .with_radii([0.01])
+                                .with_origins([(
+                                    rb.translation().x,
+                                    rb.translation().y,
+                                    0.,
+                                )]),
+                            )
+                            .unwrap();
+
+                        // proportional control
+                        rb.add_force(force, true);
+                        rb.add_torque(torque, true);
                     }
                 }
 
@@ -385,22 +356,19 @@ impl GameState {
                     _ => {}
                 }
 
-                if scored.is_some() {
+                if let Some(team) = scored {
                     inner.phase = GamePhase::Kickoff {
                         first_tick: Tick(inner.tick.0 + 1),
+                        team,
                     };
                 }
 
                 // New tick
-                (true, scored)
+                true
             } else {
-                (false, None)
+                false
             }
         };
-
-        if let Some(team) = goal_scored {
-            self.position_for_kickoff(team).await;
-        }
 
         if should_tick {
             self.tick().await;
@@ -452,6 +420,71 @@ impl GameStateInner {
             .get(&RobotSession::get_robot_id(team, robot_index))
             .and_then(|session| self.physics_state.get_rb_mut(session.rigid_body))
     }
+
+    async fn position_for_kickoff(&mut self, kickoff_team: Team) {
+        log::info!("Positioning for kickoff with team {}", kickoff_team);
+
+        // Center ball
+        self.physics_state.teleport_ball(Vec2::ZERO);
+
+        // Kickoffs alternate
+        let non_kickoff = match kickoff_team {
+            Team::Cyan => Team::Yellow,
+            Team::Yellow => Team::Cyan,
+        };
+
+        let kickoff_side = match kickoff_team {
+            Team::Cyan => -1.,
+            Team::Yellow => 1.,
+        };
+
+        let (kickoff_direction, non_kickoff_direction) = match kickoff_team {
+            Team::Cyan => (0., PI),
+            Team::Yellow => (PI, 0.),
+        };
+
+        let non_kickoff_side = -kickoff_side;
+
+        // Position kicking off team
+        if let Some(rb) = self.robot_rb_mut(kickoff_team, 0) {
+            rb.set_position(
+                Isometry2::new(vector![kickoff_side * 0.2, 0.], kickoff_direction).into(),
+                true,
+            );
+            rb.set_vels(RigidBodyVelocity::zero(), true);
+        }
+        if let Some(rb) = self.robot_rb_mut(kickoff_team, 1) {
+            rb.set_position(
+                Isometry2::new(vector![kickoff_side * 0.615, 0.], kickoff_direction).into(),
+                true,
+            );
+            rb.set_vels(RigidBodyVelocity::zero(), true);
+        }
+
+        // Position other side
+        if let Some(rb) = self.robot_rb_mut(non_kickoff, 0) {
+            rb.set_position(
+                Isometry2::new(
+                    vector![non_kickoff_side * 0.615, 0.34],
+                    non_kickoff_direction,
+                )
+                .into(),
+                true,
+            );
+            rb.set_vels(RigidBodyVelocity::zero(), true);
+        }
+        if let Some(rb) = self.robot_rb_mut(non_kickoff, 1) {
+            rb.set_position(
+                Isometry2::new(
+                    vector![non_kickoff_side * 0.615, -0.34],
+                    non_kickoff_direction,
+                )
+                .into(),
+                true,
+            );
+            rb.set_vels(RigidBodyVelocity::zero(), true);
+        }
+    }
 }
 
 #[derive(Debug, Clone, Serialize, PartialEq, Eq)]
@@ -460,6 +493,8 @@ pub enum GamePhase {
     Kickoff {
         /// The first frozen tick
         first_tick: Tick,
+        /// Team kicking off
+        team: Team,
     },
     Playing,
 }
@@ -467,10 +502,13 @@ pub enum GamePhase {
 impl GamePhase {
     fn advance(&mut self, current_tick: Tick) {
         *self = match &self {
-            GamePhase::Kickoff { first_tick } => {
+            GamePhase::Kickoff {
+                first_tick,
+                team: _,
+            } => {
                 // During the last tick, we set the game phase to playing so that clients
                 // can submit their command for the following tick
-                if current_tick.0 >= first_tick.0 + 4 {
+                if current_tick.0 >= first_tick.0 + 20 {
                     GamePhase::Playing
                 } else {
                     self.clone()

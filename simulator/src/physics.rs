@@ -141,8 +141,8 @@ impl PhysicsState {
 
     pub(crate) fn spawn_robot(&mut self) -> RigidBodyHandle {
         let rb = RigidBodyBuilder::dynamic()
-            .linear_damping(3.0)
-            .angular_damping(5.0)
+            // .linear_damping(2.0)
+            // .angular_damping(5.0)
             .build();
         let rb = self.rigid_body_set.insert(rb);
 
