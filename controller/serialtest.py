@@ -31,11 +31,18 @@ def read_cobs_packet(ser: serial.Serial):
             buf += b
 
 
-def send_command(ser: serial.Serial, freq: int):
+def send_command(ser: serial.Serial, controls: list[int]):
     for i in range(5):
         try:
             ser.write(
-                b"\0" + cobs.encode(freq.to_bytes(4, "big", signed=False)) + b"\0"
+                b"\0"
+                + cobs.encode(
+                    controls[0].to_bytes(4, "big", signed=True)
+                    + controls[1].to_bytes(4, "big", signed=True)
+                    + controls[2].to_bytes(4, "big", signed=True)
+                    + controls[3].to_bytes(4, "big", signed=True)
+                )
+                + b"\0"
             )
         except serial.SerialTimeoutException:
             continue
@@ -50,6 +57,7 @@ def send_command(ser: serial.Serial, freq: int):
 
 
 while True:
-    period = send_command(ser, 5)
+    x = list(map(int, input("Controls (_ _ _ _) from -100 to 100: ").split(" ")))
+    period = send_command(ser, x)
     print(f"New odom: {period} mm")
     sleep(0.2)

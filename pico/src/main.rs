@@ -37,7 +37,7 @@ bind_interrupts!(struct Irqs {
     USBCTRL_IRQ => embassy_rp::usb::InterruptHandler<USB>;
 });
 
-static CONTROL_SIGNAL: Signal<CriticalSectionRawMutex, i32> = Signal::new();
+static CONTROL_SIGNAL: Signal<CriticalSectionRawMutex, [i32; 4]> = Signal::new();
 
 static ODOM_SIGNAL_FL: Signal<CriticalSectionRawMutex, i32> = Signal::new();
 static ODOM_SIGNAL_FR: Signal<CriticalSectionRawMutex, i32> = Signal::new();
@@ -87,20 +87,13 @@ async fn kinematics_task(
     let mut ticker = Ticker::every(Duration::from_hz(20));
     let mut motors = [fl, rl, rr, fr];
     loop {
-        for (motor, signal) in zip(
-            &mut motors,
-            [
-                &ODOM_SIGNAL_FL,
-                &ODOM_SIGNAL_RL,
-                &ODOM_SIGNAL_RR,
-                &ODOM_SIGNAL_FR,
-            ],
-        ) {
-            if let Some(speed) = CONTROL_SIGNAL.try_take() {
-                motor.target = speed;
-            }
+        if let Some(speed) = CONTROL_SIGNAL.try_take() {
+            for (i, motor) in motors.iter_mut().enumerate() {
+                motor.target = speed[i];
+                info!("motor {} speed {}", i, speed[i]);
 
-            motor.update(signal.try_take().unwrap_or(0));
+                motor.update(0);
+            }
         }
 
         ticker.next().await;
@@ -168,6 +161,7 @@ async fn main(spawner: Spawner) {
                     .split()
                     .1
                     .unwrap(),
+                false,
             ),
             MotorFeedback::new(
                 Output::new(p.PIN_4, Level::Low),
@@ -175,6 +169,7 @@ async fn main(spawner: Spawner) {
                     .split()
                     .1
                     .unwrap(),
+                false,
             ),
             MotorFeedback::new(
                 Output::new(p.PIN_6, Level::Low),
@@ -182,6 +177,7 @@ async fn main(spawner: Spawner) {
                     .split()
                     .1
                     .unwrap(),
+                false,
             ),
             MotorFeedback::new(
                 Output::new(p.PIN_8, Level::Low),
@@ -189,6 +185,7 @@ async fn main(spawner: Spawner) {
                     .split()
                     .1
                     .unwrap(),
+                false,
             ),
         ))
         .unwrap();
@@ -279,16 +276,22 @@ async fn handle_commands<'d, T: Instance + 'd>(
                 }
                 Ok(None) => {}
                 Ok(Some(n)) => {
-                    if n != 4 {
+                    if n != 16 {
                         warn!("Invalid packet size");
                     } else {
-                        let mut control_dst = [0u8; 4];
-                        control_dst.copy_from_slice(&decoder.dest()[..4]);
-                        let control = i32::from_be_bytes(control_dst);
+                        let mut control_dst = [0u8; 16];
+                        control_dst.copy_from_slice(&decoder.dest()[..16]);
+                        let control_0 = i32::from_be_bytes(control_dst[..4].try_into().unwrap());
+                        let control_1 = i32::from_be_bytes(control_dst[4..8].try_into().unwrap());
+                        let control_2 = i32::from_be_bytes(control_dst[8..12].try_into().unwrap());
+                        let control_3 = i32::from_be_bytes(control_dst[12..16].try_into().unwrap());
 
-                        info!("Received control: {}", control);
+                        info!(
+                            "Received controls: {} {} {} {}",
+                            control_0, control_1, control_2, control_3
+                        );
 
-                        CONTROL_SIGNAL.signal((control as f32 * PULSES_PER_MM) as i32);
+                        CONTROL_SIGNAL.signal([control_0, control_1, control_2, control_3]);
 
                         if let Some(odom_val) = ODOM_SIGNAL_FL.try_take() {
                             odom = odom_val;
