@@ -164,12 +164,12 @@ async fn main(spawner: Spawner) {
                 false,
             ),
             MotorFeedback::new(
-                Output::new(p.PIN_4, Level::Low),
-                Pwm::new_output_b(p.PWM_SLICE2, p.PIN_5, Default::default())
+                Output::new(p.PIN_5, Level::Low),
+                Pwm::new_output_a(p.PWM_SLICE2, p.PIN_4, Default::default())
                     .split()
-                    .1
+                    .0
                     .unwrap(),
-                false,
+                true,
             ),
             MotorFeedback::new(
                 Output::new(p.PIN_6, Level::Low),
