@@ -3,7 +3,7 @@ use embassy_rp::{
     pwm::{PwmOutput, SetDutyCycle},
 };
 use embassy_time::{Duration, Instant};
-use log::{info, warn};
+use log::warn;
 use pid::Pid;
 
 pub struct Motor {
@@ -66,6 +66,28 @@ impl MotorFeedback {
 
     /// Call at 20Hz
     pub fn update(&mut self, odom: i32) {
+        let odom_diff = odom - self.last_odom; // This is a signed integer for direction
+        let elapsed = self.last_instant.elapsed();
+        self.last_instant = Instant::now();
+        self.last_odom = odom;
+        self.pid.setpoint(self.target as f32);
+
+        if elapsed > Duration::from_millis(75) {
+            warn!("Too long between motor feedback");
+            return;
+        }
+
+        if elapsed < Duration::from_millis(25) {
+            warn!("Too short between motor feedback");
+            return;
+        }
+
+        // Pulses / s
+        let speed = (odom_diff * 1000) / elapsed.as_millis() as i32;
+
+        let control = self.pid.next_control_output(speed as f32);
+
+        self.motor.set_speed(control.output as i32);
         self.motor.set_speed(self.target);
     }
 }

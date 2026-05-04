@@ -50,7 +50,12 @@ def send_command(ser: serial.Serial, controls: list[int]):
         response = read_cobs_packet(ser)
 
         if response:
-            return int.from_bytes(response, "big", signed=True)
+            return [
+                int.from_bytes(response[:4], "big", signed=True),
+                int.from_bytes(response[4:8], "big", signed=True),
+                int.from_bytes(response[8:12], "big", signed=True),
+                int.from_bytes(response[12:16], "big", signed=True),
+            ]
         print("No response received, retrying...")
 
     raise CommandFailedError("Failed to receive command response.")
@@ -58,6 +63,5 @@ def send_command(ser: serial.Serial, controls: list[int]):
 
 while True:
     x = list(map(int, input("Controls (_ _ _ _) from -100 to 100: ").split(" ")))
-    period = send_command(ser, x)
-    print(f"New odom: {period} mm")
-    sleep(0.2)
+    periods = send_command(ser, x)
+    print(f"New odoms: {' '.join([f'{period} mm' for period in periods])}")

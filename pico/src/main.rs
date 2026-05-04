@@ -64,13 +64,17 @@ async fn led_task(mut led: Output<'static>) {
 macro_rules! odom_task {
     ($name:ident, $pin:ty) => {
         #[embassy_executor::task]
-        async fn $name(mut encoder: $pin, signal: &'static Signal<CriticalSectionRawMutex, i32>) {
+        async fn $name(
+            mut encoder: $pin,
+            signal: &'static Signal<CriticalSectionRawMutex, i32>,
+            reverse: bool,
+        ) {
             let mut count: i32 = 0;
             loop {
                 count += match encoder.read().await {
                     Direction::Clockwise => 1,
                     Direction::CounterClockwise => -1,
-                };
+                } * (if reverse { -1 } else { 1 });
                 signal.signal(count);
             }
         }
@@ -86,14 +90,32 @@ async fn kinematics_task(
 ) {
     let mut ticker = Ticker::every(Duration::from_hz(20));
     let mut motors = [fl, rl, rr, fr];
+    let mut last_odoms = [0; 4];
     loop {
         if let Some(speed) = CONTROL_SIGNAL.try_take() {
-            for (i, motor) in motors.iter_mut().enumerate() {
+            for (i, (motor, signal)) in zip(
+                motors.iter_mut(),
+                [
+                    &ODOM_SIGNAL_FL,
+                    &ODOM_SIGNAL_RL,
+                    &ODOM_SIGNAL_RR,
+                    &ODOM_SIGNAL_FR,
+                ]
+                .iter(),
+            )
+            .enumerate()
+            {
                 motor.target = speed[i];
                 info!("motor {} speed {}", i, speed[i]);
 
-                motor.update(0);
+                if let Some(odom) = signal.try_take() {
+                    last_odoms[i] = odom;
+                }
             }
+        }
+
+        for (i, motor) in motors.iter_mut().enumerate() {
+            motor.update(last_odoms[i]);
         }
 
         ticker.next().await;
@@ -141,16 +163,16 @@ async fn main(spawner: Spawner) {
     odom_task!(odom_task_3, PioEncoder<'static, PIO0, 3>);
 
     spawner
-        .spawn(odom_task_0(encoder0, &ODOM_SIGNAL_FL))
+        .spawn(odom_task_0(encoder0, &ODOM_SIGNAL_FL, false))
         .unwrap();
     spawner
-        .spawn(odom_task_1(encoder1, &ODOM_SIGNAL_RL))
+        .spawn(odom_task_1(encoder1, &ODOM_SIGNAL_RL, false))
         .unwrap();
     spawner
-        .spawn(odom_task_2(encoder2, &ODOM_SIGNAL_RR))
+        .spawn(odom_task_2(encoder2, &ODOM_SIGNAL_RR, true))
         .unwrap();
     spawner
-        .spawn(odom_task_3(encoder3, &ODOM_SIGNAL_FR))
+        .spawn(odom_task_3(encoder3, &ODOM_SIGNAL_FR, false))
         .unwrap();
 
     spawner
@@ -161,7 +183,7 @@ async fn main(spawner: Spawner) {
                     .split()
                     .1
                     .unwrap(),
-                false,
+                true,
             ),
             MotorFeedback::new(
                 Output::new(p.PIN_5, Level::Low),
@@ -169,7 +191,7 @@ async fn main(spawner: Spawner) {
                     .split()
                     .0
                     .unwrap(),
-                true,
+                false,
             ),
             MotorFeedback::new(
                 Output::new(p.PIN_6, Level::Low),
@@ -177,7 +199,7 @@ async fn main(spawner: Spawner) {
                     .split()
                     .1
                     .unwrap(),
-                true,
+                false,
             ),
             MotorFeedback::new(
                 Output::new(p.PIN_9, Level::Low),
@@ -185,7 +207,7 @@ async fn main(spawner: Spawner) {
                     .split()
                     .0
                     .unwrap(),
-                false,
+                true,
             ),
         ))
         .unwrap();
@@ -263,13 +285,13 @@ async fn handle_commands<'d, T: Instance + 'd>(
     let mut buf = [0; 64];
     let mut dest = [0; 1024];
     let mut decoder = CobsDecoder::new(&mut dest);
-    let mut odom = 0;
+    let mut odoms = [0, 0, 0, 0];
 
     loop {
         let n = class.read_packet(&mut buf).await?;
         let data = &buf[..n];
 
-        for byte in data {
+        'outer: for byte in data {
             match decoder.feed(*byte) {
                 Err(e) => {
                     warn!("Error parsing packet: {:?}", e);
@@ -291,21 +313,39 @@ async fn handle_commands<'d, T: Instance + 'd>(
                             control_0, control_1, control_2, control_3
                         );
 
-                        CONTROL_SIGNAL.signal([control_0, control_1, control_2, control_3]);
+                        CONTROL_SIGNAL.signal([
+                            (control_0 as f32 * PULSES_PER_MM) as i32,
+                            (control_1 as f32 * PULSES_PER_MM) as i32,
+                            (control_2 as f32 * PULSES_PER_MM) as i32,
+                            (control_3 as f32 * PULSES_PER_MM) as i32,
+                        ]);
 
                         if let Some(odom_val) = ODOM_SIGNAL_FL.try_take() {
-                            odom = odom_val;
+                            odoms[0] = odom_val;
+                        }
+                        if let Some(odom_val) = ODOM_SIGNAL_RL.try_take() {
+                            odoms[1] = odom_val;
+                        }
+                        if let Some(odom_val) = ODOM_SIGNAL_RR.try_take() {
+                            odoms[2] = odom_val;
+                        }
+                        if let Some(odom_val) = ODOM_SIGNAL_FR.try_take() {
+                            odoms[3] = odom_val;
                         }
 
-                        // Return period in milliseconds
+                        // Return odom of all wheels
                         let mut out_buf = [0u8; 62];
                         let mut encoder = CobsEncoder::new(&mut out_buf);
-                        let Ok(_) =
-                            encoder.push(&((odom as f32 / PULSES_PER_MM) as i32).to_be_bytes())
-                        else {
-                            warn!("Error encoding data!");
-                            continue;
-                        };
+
+                        for odom in odoms {
+                            let Ok(_) =
+                                encoder.push(&((odom as f32 / PULSES_PER_MM) as i32).to_be_bytes())
+                            else {
+                                warn!("Error encoding data!");
+                                continue 'outer;
+                            };
+                        }
+
                         encoder.finalize();
                         class.write_packet(&[0]).await?;
                         class.write_packet(&out_buf).await?;
