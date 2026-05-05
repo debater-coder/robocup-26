@@ -3,7 +3,7 @@ use embassy_rp::{
     pwm::{PwmOutput, SetDutyCycle},
 };
 use embassy_time::{Duration, Instant};
-use log::warn;
+use log::{info, warn};
 use pid::Pid;
 
 pub struct Motor {
@@ -42,6 +42,7 @@ impl Motor {
 
 pub struct MotorFeedback {
     motor: Motor,
+    motor_id: u32,
     pid: Pid<f32>,
     /// target speed in pulses/s
     pub target: i32,
@@ -50,7 +51,7 @@ pub struct MotorFeedback {
 }
 
 impl MotorFeedback {
-    pub fn new(dir: Output<'static>, pwm: PwmOutput<'static>, reversed: bool) -> Self {
+    pub fn new(dir: Output<'static>, pwm: PwmOutput<'static>, id: u32, reversed: bool) -> Self {
         let mut pid = Pid::new(0.0, 100.0);
 
         pid.p(10.0, 100.0);
@@ -61,6 +62,7 @@ impl MotorFeedback {
             target: 0,
             last_instant: Instant::now(),
             last_odom: 0,
+            motor_id: id,
         }
     }
 
@@ -73,19 +75,34 @@ impl MotorFeedback {
         self.pid.setpoint(self.target as f32);
 
         if elapsed > Duration::from_millis(75) {
-            warn!("Too long between motor feedback");
+            warn!(
+                "Too long between motor feedback, motor id: {}",
+                self.motor_id
+            );
             return;
         }
 
         if elapsed < Duration::from_millis(25) {
-            warn!("Too short between motor feedback");
+            warn!(
+                "Too short between motor feedback, motor id: {}",
+                self.motor_id
+            );
             return;
         }
 
         // Pulses / s
         let speed = (odom_diff * 1000) / elapsed.as_millis() as i32;
+        info!(
+            "setpoint: {}, measured: {}, odom_diff: {}, elapsed: {}, input odom: {}",
+            self.target,
+            speed,
+            odom_diff,
+            elapsed.as_millis(),
+            odom
+        );
 
         let control = self.pid.next_control_output(speed as f32);
+        info!("Motor id: {}, control {:?}", self.motor_id, control);
 
         self.motor.set_speed(control.output as i32);
         self.motor.set_speed(self.target);

@@ -93,28 +93,28 @@ async fn kinematics_task(
     let mut last_odoms = [0; 4];
     loop {
         if let Some(speed) = CONTROL_SIGNAL.try_take() {
-            for (i, (motor, signal)) in zip(
-                motors.iter_mut(),
-                [
-                    &ODOM_SIGNAL_FL,
-                    &ODOM_SIGNAL_RL,
-                    &ODOM_SIGNAL_RR,
-                    &ODOM_SIGNAL_FR,
-                ]
-                .iter(),
-            )
-            .enumerate()
-            {
+            for (i, motor) in motors.iter_mut().enumerate() {
                 motor.target = speed[i];
                 info!("motor {} speed {}", i, speed[i]);
-
-                if let Some(odom) = signal.try_take() {
-                    last_odoms[i] = odom;
-                }
             }
         }
 
-        for (i, motor) in motors.iter_mut().enumerate() {
+        for (i, (motor, signal)) in zip(
+            motors.iter_mut(),
+            [
+                &ODOM_SIGNAL_FL,
+                &ODOM_SIGNAL_RL,
+                &ODOM_SIGNAL_RR,
+                &ODOM_SIGNAL_FR,
+            ]
+            .iter(),
+        )
+        .enumerate()
+        {
+            if let Some(odom) = signal.try_take() {
+                last_odoms[i] = odom;
+            }
+
             motor.update(last_odoms[i]);
         }
 
@@ -163,13 +163,13 @@ async fn main(spawner: Spawner) {
     odom_task!(odom_task_3, PioEncoder<'static, PIO0, 3>);
 
     spawner
-        .spawn(odom_task_0(encoder0, &ODOM_SIGNAL_FL, false))
+        .spawn(odom_task_0(encoder0, &ODOM_SIGNAL_FL, true))
         .unwrap();
     spawner
-        .spawn(odom_task_1(encoder1, &ODOM_SIGNAL_RL, false))
+        .spawn(odom_task_1(encoder1, &ODOM_SIGNAL_RL, true))
         .unwrap();
     spawner
-        .spawn(odom_task_2(encoder2, &ODOM_SIGNAL_RR, true))
+        .spawn(odom_task_2(encoder2, &ODOM_SIGNAL_RR, false))
         .unwrap();
     spawner
         .spawn(odom_task_3(encoder3, &ODOM_SIGNAL_FR, false))
@@ -183,6 +183,7 @@ async fn main(spawner: Spawner) {
                     .split()
                     .1
                     .unwrap(),
+                0,
                 true,
             ),
             MotorFeedback::new(
@@ -191,6 +192,7 @@ async fn main(spawner: Spawner) {
                     .split()
                     .0
                     .unwrap(),
+                1,
                 false,
             ),
             MotorFeedback::new(
@@ -199,6 +201,7 @@ async fn main(spawner: Spawner) {
                     .split()
                     .1
                     .unwrap(),
+                2,
                 false,
             ),
             MotorFeedback::new(
@@ -207,6 +210,7 @@ async fn main(spawner: Spawner) {
                     .split()
                     .0
                     .unwrap(),
+                3,
                 true,
             ),
         ))
