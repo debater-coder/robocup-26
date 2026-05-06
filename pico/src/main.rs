@@ -22,6 +22,7 @@ use embassy_rp::usb::{Driver, Instance};
 use embassy_rp::watchdog::Watchdog;
 use embassy_sync::blocking_mutex::raw::CriticalSectionRawMutex;
 use embassy_sync::signal::Signal;
+use embassy_sync::watch::Watch;
 use embassy_time::{Duration, Ticker, Timer};
 use embassy_usb::class::cdc_acm::{CdcAcmClass, State};
 use embassy_usb::driver::EndpointError;
@@ -39,10 +40,10 @@ bind_interrupts!(struct Irqs {
 
 static CONTROL_SIGNAL: Signal<CriticalSectionRawMutex, [i32; 4]> = Signal::new();
 
-static ODOM_SIGNAL_FL: Signal<CriticalSectionRawMutex, i32> = Signal::new();
-static ODOM_SIGNAL_FR: Signal<CriticalSectionRawMutex, i32> = Signal::new();
-static ODOM_SIGNAL_RL: Signal<CriticalSectionRawMutex, i32> = Signal::new();
-static ODOM_SIGNAL_RR: Signal<CriticalSectionRawMutex, i32> = Signal::new();
+static ODOM_WATCH_FL: Watch<CriticalSectionRawMutex, i32, 8> = Watch::new();
+static ODOM_WATCH_FR: Watch<CriticalSectionRawMutex, i32, 8> = Watch::new();
+static ODOM_WATCH_RL: Watch<CriticalSectionRawMutex, i32, 8> = Watch::new();
+static ODOM_WATCH_RR: Watch<CriticalSectionRawMutex, i32, 8> = Watch::new();
 
 const PULSES_PER_MM: f32 = 2520.0 / (48.0 * TAU);
 
@@ -66,16 +67,17 @@ macro_rules! odom_task {
         #[embassy_executor::task]
         async fn $name(
             mut encoder: $pin,
-            signal: &'static Signal<CriticalSectionRawMutex, i32>,
+            watch: &'static Watch<CriticalSectionRawMutex, i32, 8>,
             reverse: bool,
         ) {
             let mut count: i32 = 0;
+            let sender = watch.sender();
             loop {
                 count += match encoder.read().await {
                     Direction::Clockwise => 1,
                     Direction::CounterClockwise => -1,
                 } * (if reverse { -1 } else { 1 });
-                signal.signal(count);
+                sender.send(count);
             }
         }
     };
@@ -90,7 +92,12 @@ async fn kinematics_task(
 ) {
     let mut ticker = Ticker::every(Duration::from_hz(20));
     let mut motors = [fl, rl, rr, fr];
-    let mut last_odoms = [0; 4];
+    let mut recv = [
+        ODOM_WATCH_FL.receiver().unwrap(),
+        ODOM_WATCH_RL.receiver().unwrap(),
+        ODOM_WATCH_RR.receiver().unwrap(),
+        ODOM_WATCH_FR.receiver().unwrap(),
+    ];
     loop {
         if let Some(speed) = CONTROL_SIGNAL.try_take() {
             for (i, motor) in motors.iter_mut().enumerate() {
@@ -99,23 +106,8 @@ async fn kinematics_task(
             }
         }
 
-        for (i, (motor, signal)) in zip(
-            motors.iter_mut(),
-            [
-                &ODOM_SIGNAL_FL,
-                &ODOM_SIGNAL_RL,
-                &ODOM_SIGNAL_RR,
-                &ODOM_SIGNAL_FR,
-            ]
-            .iter(),
-        )
-        .enumerate()
-        {
-            if let Some(odom) = signal.try_take() {
-                last_odoms[i] = odom;
-            }
-
-            motor.update(last_odoms[i]);
+        for (motor, signal) in zip(motors.iter_mut(), recv.iter_mut()) {
+            motor.update(signal.try_get().unwrap_or(0));
         }
 
         ticker.next().await;
@@ -163,16 +155,16 @@ async fn main(spawner: Spawner) {
     odom_task!(odom_task_3, PioEncoder<'static, PIO0, 3>);
 
     spawner
-        .spawn(odom_task_0(encoder0, &ODOM_SIGNAL_FL, true))
+        .spawn(odom_task_0(encoder0, &ODOM_WATCH_FL, true))
         .unwrap();
     spawner
-        .spawn(odom_task_1(encoder1, &ODOM_SIGNAL_RL, true))
+        .spawn(odom_task_1(encoder1, &ODOM_WATCH_RL, true))
         .unwrap();
     spawner
-        .spawn(odom_task_2(encoder2, &ODOM_SIGNAL_RR, false))
+        .spawn(odom_task_2(encoder2, &ODOM_WATCH_RR, false))
         .unwrap();
     spawner
-        .spawn(odom_task_3(encoder3, &ODOM_SIGNAL_FR, false))
+        .spawn(odom_task_3(encoder3, &ODOM_WATCH_FR, false))
         .unwrap();
 
     spawner
@@ -289,7 +281,12 @@ async fn handle_commands<'d, T: Instance + 'd>(
     let mut buf = [0; 64];
     let mut dest = [0; 1024];
     let mut decoder = CobsDecoder::new(&mut dest);
-    let mut odoms = [0, 0, 0, 0];
+    let mut recv = [
+        ODOM_WATCH_FL.receiver().unwrap(),
+        ODOM_WATCH_RL.receiver().unwrap(),
+        ODOM_WATCH_RR.receiver().unwrap(),
+        ODOM_WATCH_FR.receiver().unwrap(),
+    ];
 
     loop {
         let n = class.read_packet(&mut buf).await?;
@@ -324,27 +321,15 @@ async fn handle_commands<'d, T: Instance + 'd>(
                             (control_3 as f32 * PULSES_PER_MM) as i32,
                         ]);
 
-                        if let Some(odom_val) = ODOM_SIGNAL_FL.try_take() {
-                            odoms[0] = odom_val;
-                        }
-                        if let Some(odom_val) = ODOM_SIGNAL_RL.try_take() {
-                            odoms[1] = odom_val;
-                        }
-                        if let Some(odom_val) = ODOM_SIGNAL_RR.try_take() {
-                            odoms[2] = odom_val;
-                        }
-                        if let Some(odom_val) = ODOM_SIGNAL_FR.try_take() {
-                            odoms[3] = odom_val;
-                        }
-
                         // Return odom of all wheels
                         let mut out_buf = [0u8; 62];
                         let mut encoder = CobsEncoder::new(&mut out_buf);
 
-                        for odom in odoms {
-                            let Ok(_) =
-                                encoder.push(&((odom as f32 / PULSES_PER_MM) as i32).to_be_bytes())
-                            else {
+                        for odom in &mut recv {
+                            let Ok(_) = encoder.push(
+                                &((odom.try_get().unwrap_or(0) as f32 / PULSES_PER_MM) as i32)
+                                    .to_be_bytes(),
+                            ) else {
                                 warn!("Error encoding data!");
                                 continue 'outer;
                             };

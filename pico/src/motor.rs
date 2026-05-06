@@ -48,13 +48,14 @@ pub struct MotorFeedback {
     pub target: i32,
     last_instant: Instant,
     last_odom: i32,
+    k_forward: f32,
 }
 
 impl MotorFeedback {
     pub fn new(dir: Output<'static>, pwm: PwmOutput<'static>, id: u32, reversed: bool) -> Self {
         let mut pid = Pid::new(0.0, 100.0);
 
-        pid.p(10.0, 100.0);
+        pid.i(10.0, 100.0);
 
         MotorFeedback {
             motor: Motor::new(dir, pwm, reversed),
@@ -63,6 +64,7 @@ impl MotorFeedback {
             last_instant: Instant::now(),
             last_odom: 0,
             motor_id: id,
+            k_forward: 1.0,
         }
     }
 
@@ -93,18 +95,15 @@ impl MotorFeedback {
         // Pulses / s
         let speed = (odom_diff * 1000) / elapsed.as_millis() as i32;
         info!(
-            "setpoint: {}, measured: {}, odom_diff: {}, elapsed: {}, input odom: {}",
-            self.target,
-            speed,
-            odom_diff,
-            elapsed.as_millis(),
-            odom
+            "MOTOR {} | setpoint speed: {} | measured speed: {}",
+            self.motor_id, self.target, speed,
         );
 
-        let control = self.pid.next_control_output(speed as f32);
-        info!("Motor id: {}, control {:?}", self.motor_id, control);
+        // let control = self.pid.next_control_output(speed as f32);
+        // info!("Motor id: {}, control {:?}", self.motor_id, control);
 
-        self.motor.set_speed(control.output as i32);
-        self.motor.set_speed(self.target);
+        let feed_forward = self.target as f32 * self.k_forward;
+
+        self.motor.set_speed(feed_forward as i32);
     }
 }
