@@ -1,7 +1,3 @@
-//! This example shows how to use USB (Universal Serial Bus) in the RP2040 chip.
-//!
-//! This creates the possibility to send log::info/warn/error/debug! to USB serial port.
-
 #![no_std]
 #![no_main]
 
@@ -17,7 +13,6 @@ use embassy_rp::bind_interrupts;
 use embassy_rp::gpio::{Level, Output};
 use embassy_rp::peripherals::{PIO0, USB};
 use embassy_rp::pio::Pio;
-use embassy_rp::pio_programs::rotary_encoder::{Direction, PioEncoder, PioEncoderProgram};
 use embassy_rp::pwm::Pwm;
 use embassy_rp::usb::{Driver, Instance};
 use embassy_rp::watchdog::Watchdog;
@@ -32,6 +27,9 @@ use log::{info, warn};
 
 use {defmt_rtt as _, panic_probe as _};
 
+use encoder::{Direction, PioEncoder, PioEncoderProgram};
+
+mod encoder;
 mod kinematics;
 mod motor;
 
@@ -168,10 +166,10 @@ async fn main(spawner: Spawner) {
     } = Pio::new(p.PIO0, Irqs);
 
     let prg = PioEncoderProgram::new(&mut common);
-    let encoder0 = PioEncoder::new(&mut common, sm0, p.PIN_11, p.PIN_12, &prg);
-    let encoder1 = PioEncoder::new(&mut common, sm1, p.PIN_19, p.PIN_20, &prg);
-    let encoder2 = PioEncoder::new(&mut common, sm2, p.PIN_13, p.PIN_14, &prg);
-    let encoder3 = PioEncoder::new(&mut common, sm3, p.PIN_21, p.PIN_22, &prg);
+    let encoder0 = PioEncoder::new(&mut common, sm0, p.PIN_11, p.PIN_12, &prg, 500_000);
+    let encoder1 = PioEncoder::new(&mut common, sm1, p.PIN_19, p.PIN_20, &prg, 500_000);
+    let encoder2 = PioEncoder::new(&mut common, sm2, p.PIN_13, p.PIN_14, &prg, 500_000);
+    let encoder3 = PioEncoder::new(&mut common, sm3, p.PIN_21, p.PIN_22, &prg, 500_000);
 
     odom_task!(odom_task_0, PioEncoder<'static, PIO0, 0>);
     odom_task!(odom_task_1, PioEncoder<'static, PIO0, 1>);

@@ -13,6 +13,7 @@ defmt = "1"
 defmt-rtt = "1"
 panic-probe = { version = "1", features = ["print-defmt"] }
 
+pio = "0.3.0"
 pid = "4.0.0"
 rp-pico = "0.9"
 panic-halt = "1.0.0"
