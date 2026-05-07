@@ -5,9 +5,10 @@
 #![no_std]
 #![no_main]
 
-use core::f32::consts::{PI, TAU};
+use core::f32::consts::PI;
 use core::iter::zip;
 
+use crate::kinematics::ChassisVelocity;
 use crate::motor::{Motor, MotorFeedback};
 use cobs::{CobsDecoder, CobsEncoder};
 use embassy_executor::Spawner;
@@ -31,6 +32,7 @@ use log::{info, warn};
 
 use {defmt_rtt as _, panic_probe as _};
 
+mod kinematics;
 mod motor;
 
 bind_interrupts!(struct Irqs {
@@ -38,7 +40,10 @@ bind_interrupts!(struct Irqs {
     USBCTRL_IRQ => embassy_rp::usb::InterruptHandler<USB>;
 });
 
-static CONTROL_SIGNAL: Signal<CriticalSectionRawMutex, [i32; 4]> = Signal::new();
+/// CHASSIS_VEL_SIGNAL is in robot local coordinate frame
+static CHASSIS_VEL_SIGNAL: Signal<CriticalSectionRawMutex, ChassisVelocity> = Signal::new();
+
+static DRIBBLER_CONTROL_SIGNAL: Signal<CriticalSectionRawMutex, i32> = Signal::new();
 
 static ODOM_WATCH_FL: Watch<CriticalSectionRawMutex, i32, 8> = Watch::new();
 static ODOM_WATCH_FR: Watch<CriticalSectionRawMutex, i32, 8> = Watch::new();
@@ -84,6 +89,13 @@ macro_rules! odom_task {
 }
 
 #[embassy_executor::task]
+async fn dribbler_task(mut dribbler: Motor) {
+    loop {
+        dribbler.set_speed(DRIBBLER_CONTROL_SIGNAL.wait().await);
+    }
+}
+
+#[embassy_executor::task]
 async fn kinematics_task(
     fl: MotorFeedback,
     rl: MotorFeedback,
@@ -99,10 +111,12 @@ async fn kinematics_task(
         ODOM_WATCH_FR.receiver().unwrap(),
     ];
     loop {
-        if let Some(speed) = CONTROL_SIGNAL.try_take() {
+        if let Some(chassis_vel) = CHASSIS_VEL_SIGNAL.try_take() {
+            // Compute wheel velocities from chassis velocities
+            let wheel_vels = chassis_vel.inverse_kinematics();
             for (i, motor) in motors.iter_mut().enumerate() {
-                motor.target = speed[i];
-                info!("motor {} speed {}", i, speed[i]);
+                motor.target = wheel_vels.as_array()[i] as i32;
+                info!("motor {} speed {}", i, wheel_vels.as_array()[i] as i32);
             }
         }
 
@@ -134,7 +148,7 @@ async fn main(spawner: Spawner) {
     let led = Output::new(p.PIN_25, Level::Low);
     spawner.spawn(led_task(led)).unwrap();
 
-    let mut dribbler = Motor::new(
+    let dribbler = Motor::new(
         Output::new(p.PIN_0, Level::Low),
         Pwm::new_output_b(p.PWM_SLICE0, p.PIN_1, Default::default())
             .split()
@@ -142,7 +156,7 @@ async fn main(spawner: Spawner) {
             .unwrap(),
         true,
     );
-    // dribbler.set_speed(100);
+    spawner.spawn(dribbler_task(dribbler)).unwrap();
 
     let Pio {
         mut common,
@@ -314,22 +328,21 @@ async fn handle_commands<'d, T: Instance + 'd>(
                     } else {
                         let mut control_dst = [0u8; 16];
                         control_dst.copy_from_slice(&decoder.dest()[..16]);
-                        let control_0 = i32::from_be_bytes(control_dst[..4].try_into().unwrap());
-                        let control_1 = i32::from_be_bytes(control_dst[4..8].try_into().unwrap());
-                        let control_2 = i32::from_be_bytes(control_dst[8..12].try_into().unwrap());
-                        let control_3 = i32::from_be_bytes(control_dst[12..16].try_into().unwrap());
+                        let x = i32::from_be_bytes(control_dst[..4].try_into().unwrap());
+                        let y = i32::from_be_bytes(control_dst[4..8].try_into().unwrap());
+                        let w = i32::from_be_bytes(control_dst[8..12].try_into().unwrap()); // deg/s
+                        let dribbler_control =
+                            i32::from_be_bytes(control_dst[12..16].try_into().unwrap());
 
-                        info!(
-                            "Received controls: {} {} {} {}",
-                            control_0, control_1, control_2, control_3
-                        );
+                        info!("Received controls: {} {} {} {}", x, y, w, dribbler_control);
 
-                        CONTROL_SIGNAL.signal([
-                            (control_0 as f32 * PULSES_PER_MM) as i32,
-                            (control_1 as f32 * PULSES_PER_MM) as i32,
-                            (control_2 as f32 * PULSES_PER_MM) as i32,
-                            (control_3 as f32 * PULSES_PER_MM) as i32,
-                        ]);
+                        CHASSIS_VEL_SIGNAL.signal(ChassisVelocity {
+                            x: (x as f32 * PULSES_PER_MM),
+                            y: (y as f32 * PULSES_PER_MM),
+                            w: (w as f32 * PI / 180.), // into rad/s
+                        });
+
+                        DRIBBLER_CONTROL_SIGNAL.signal(dribbler_control);
 
                         // Return odom of all wheels
                         let mut out_buf = [0u8; 62];
