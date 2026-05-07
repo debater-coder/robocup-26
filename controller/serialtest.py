@@ -62,6 +62,6 @@ def send_command(ser: serial.Serial, controls: list[int]):
 
 
 while True:
-    # x = list(map(int, input("Controls (_ _ _ _) from -100 to 100: ").split(" ")))
-    periods = send_command(ser, [0, 0, 0, 0])
+    x = list(map(int, input("Controls (_ _ _ _) from -100 to 100: ").split(" ")))
+    periods = send_command(ser, x)
     print(f"New odoms: {' '.join([f'{period} mm' for period in periods])}")

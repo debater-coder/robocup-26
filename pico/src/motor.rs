@@ -64,7 +64,7 @@ impl MotorFeedback {
             last_instant: Instant::now(),
             last_odom: 0,
             motor_id: id,
-            k_forward: 1.0,
+            k_forward: 0.030769231,
         }
     }
 
@@ -103,7 +103,13 @@ impl MotorFeedback {
         // info!("Motor id: {}, control {:?}", self.motor_id, control);
 
         let feed_forward = self.target as f32 * self.k_forward;
+        let control_out = feed_forward as i32;
+        info!(
+            "MOTOR {} | control out: {}",
+            self.motor_id,
+            control_out.clamp(-100, 100)
+        );
 
-        self.motor.set_speed(feed_forward as i32);
+        self.motor.set_speed(control_out);
     }
 }

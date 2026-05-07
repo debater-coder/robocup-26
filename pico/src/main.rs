@@ -5,10 +5,10 @@
 #![no_std]
 #![no_main]
 
-use core::f32::consts::TAU;
+use core::f32::consts::{PI, TAU};
 use core::iter::zip;
 
-use crate::motor::MotorFeedback;
+use crate::motor::{Motor, MotorFeedback};
 use cobs::{CobsDecoder, CobsEncoder};
 use embassy_executor::Spawner;
 use embassy_futures::join::join;
@@ -45,7 +45,7 @@ static ODOM_WATCH_FR: Watch<CriticalSectionRawMutex, i32, 8> = Watch::new();
 static ODOM_WATCH_RL: Watch<CriticalSectionRawMutex, i32, 8> = Watch::new();
 static ODOM_WATCH_RR: Watch<CriticalSectionRawMutex, i32, 8> = Watch::new();
 
-const PULSES_PER_MM: f32 = 2520.0 / (48.0 * TAU);
+const PULSES_PER_MM: f32 = 1050. / (48.0 * PI);
 
 #[embassy_executor::task]
 async fn led_task(mut led: Output<'static>) {
@@ -133,6 +133,16 @@ async fn main(spawner: Spawner) {
 
     let led = Output::new(p.PIN_25, Level::Low);
     spawner.spawn(led_task(led)).unwrap();
+
+    let mut dribbler = Motor::new(
+        Output::new(p.PIN_0, Level::Low),
+        Pwm::new_output_b(p.PWM_SLICE0, p.PIN_1, Default::default())
+            .split()
+            .1
+            .unwrap(),
+        true,
+    );
+    // dribbler.set_speed(100);
 
     let Pio {
         mut common,
