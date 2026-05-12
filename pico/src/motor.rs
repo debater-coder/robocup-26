@@ -25,14 +25,16 @@ impl Motor {
     }
 
     pub fn set_speed(&mut self, speed: i32) {
-        self.speed = speed;
+        self.speed = speed.clamp(-100, 100);
         self.dir.set_level(if (speed > 0) != self.reversed {
             Level::High
         } else {
             Level::Low
         });
 
-        self.pwm.set_duty_cycle_percent(speed.abs() as u8).unwrap();
+        self.pwm
+            .set_duty_cycle_percent(self.speed.abs() as u8)
+            .unwrap();
     }
 
     pub fn get_speed(&self) -> i32 {
@@ -104,11 +106,7 @@ impl MotorFeedback {
 
         let feed_forward = self.target as f32 * self.k_forward;
         let control_out = feed_forward as i32;
-        info!(
-            "MOTOR {} | control out: {}",
-            self.motor_id,
-            control_out.clamp(-100, 100)
-        );
+        info!("MOTOR {} | control out: {}", self.motor_id, control_out);
 
         self.motor.set_speed(control_out);
     }
