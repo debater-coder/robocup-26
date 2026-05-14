@@ -4,7 +4,6 @@
 
 const LX: f32 = 0.05; // Half-length X between wheels
 const LY: f32 = 0.05; // Half-length Y between wheels
-const R: f32 = 0.024; // Wheel radius
 
 /// All velocities in mm/s
 #[derive(Debug, Clone, Copy)]
@@ -30,10 +29,10 @@ impl ChassisVelocity {
         let rotation = (LX + LY) * self.w;
 
         return WheelVelocities {
-            fl: 1. / R * (self.x - self.y - rotation),
-            rl: 1. / R * (self.x + self.y + rotation),
-            rr: 1. / R * (self.x + self.y - rotation),
-            fr: 1. / R * (self.x - self.y + rotation),
+            fl: (self.x - self.y - rotation),
+            rl: (self.x + self.y + rotation),
+            rr: (self.x + self.y - rotation),
+            fr: (self.x - self.y + rotation),
         };
     }
 }
@@ -45,9 +44,9 @@ impl WheelVelocities {
 
     pub fn forwards_kinematics(&self) -> ChassisVelocity {
         return ChassisVelocity {
-            x: (self.fl + self.rl + self.rr + self.fr) * R / 4.,
-            y: (-self.fl + self.rl + self.rr - self.fr) * R / 4.,
-            w: (-self.fl + self.rl - self.rr + self.fr) * R / (4. * (LX + LY)),
+            x: (self.fl + self.rl + self.rr + self.fr) / 4.,
+            y: (-self.fl + self.rl + self.rr - self.fr) / 4.,
+            w: (-self.fl + self.rl - self.rr + self.fr) / (4. * (LX + LY)),
         };
     }
 }

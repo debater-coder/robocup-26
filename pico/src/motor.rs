@@ -97,16 +97,15 @@ impl MotorFeedback {
         // Pulses / s
         let speed = (odom_diff * 1000) / elapsed.as_millis() as i32;
         info!(
-            "MOTOR {} | setpoint speed: {} | measured speed: {}",
-            self.motor_id, self.target, speed,
+            "[SETPOINT_SPEED_{id}]: {setpoint} | [MEASURED_SPEED_{id}]: {measured}",
+            id = self.motor_id,
+            setpoint = self.target,
+            measured = speed,
         );
-
-        // let control = self.pid.next_control_output(speed as f32);
-        // info!("Motor id: {}, control {:?}", self.motor_id, control);
 
         let feed_forward = self.target as f32 * self.k_forward;
         let control_out = feed_forward as i32;
-        info!("MOTOR {} | control out: {}", self.motor_id, control_out);
+        info!("[CONTROL_OUT_{}]: {}", self.motor_id, control_out);
 
         self.motor.set_speed(control_out);
     }
