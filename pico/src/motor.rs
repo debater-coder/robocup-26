@@ -32,8 +32,9 @@ impl Motor {
             Level::Low
         });
 
+        let abs_speed = self.speed.abs();
         self.pwm
-            .set_duty_cycle_percent(self.speed.abs() as u8)
+            .set_duty_cycle_percent(if abs_speed > 5 { abs_speed } else { 0 } as u8)
             .unwrap();
     }
 
@@ -57,7 +58,9 @@ impl MotorFeedback {
     pub fn new(dir: Output<'static>, pwm: PwmOutput<'static>, id: u32, reversed: bool) -> Self {
         let mut pid = Pid::new(0.0, 100.0);
 
-        pid.i(10.0, 100.0);
+        pid.p(0.03, 100.0);
+        pid.i(0.003, 10.0);
+        pid.d(0.003, 10.0);
 
         MotorFeedback {
             motor: Motor::new(dir, pwm, reversed),
@@ -104,8 +107,11 @@ impl MotorFeedback {
         );
 
         let feed_forward = self.target as f32 * self.k_forward;
-        let control_out = feed_forward as i32;
+        let pid_out = self.pid.next_control_output(speed as f32).output;
+        let control_out = feed_forward as i32 + pid_out as i32;
+
         info!("[CONTROL_OUT_{}]: {}", self.motor_id, control_out);
+        info!("[PID_OUT_{}]: {}", self.motor_id, pid_out);
 
         self.motor.set_speed(control_out);
     }
