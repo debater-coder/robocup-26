@@ -1,10 +1,11 @@
 #![no_std]
 #![no_main]
 
+use core::array;
 use core::f32::consts::PI;
 use core::iter::zip;
 
-use crate::kinematics::ChassisVelocity;
+use crate::kinematics::{ChassisVector, WheelVector};
 use crate::motor::{Motor, MotorFeedback};
 use cobs::{CobsDecoder, CobsEncoder};
 use embassy_executor::Spawner;
@@ -38,8 +39,9 @@ bind_interrupts!(struct Irqs {
     USBCTRL_IRQ => embassy_rp::usb::InterruptHandler<USB>;
 });
 
-/// CHASSIS_VEL_SIGNAL is in robot local coordinate frame
-static CHASSIS_VEL_SIGNAL: Signal<CriticalSectionRawMutex, ChassisVelocity> = Signal::new();
+/// CHASSIS_VEL_CONTROL_SIGNAL is in robot local coordinate frame
+static CHASSIS_VEL_CONTROL_SIGNAL: Signal<CriticalSectionRawMutex, ChassisVector> = Signal::new();
+static CHASSIS_DISPLACEMENT_WATCH: Watch<CriticalSectionRawMutex, ChassisVector, 4> = Watch::new();
 
 static DRIBBLER_CONTROL_SIGNAL: Signal<CriticalSectionRawMutex, i32> = Signal::new();
 
@@ -108,8 +110,12 @@ async fn kinematics_task(
         ODOM_WATCH_RR.receiver().unwrap(),
         ODOM_WATCH_FR.receiver().unwrap(),
     ];
+
+    let displ_sender = CHASSIS_DISPLACEMENT_WATCH.sender();
+    let mut displ_recv = CHASSIS_DISPLACEMENT_WATCH.receiver().unwrap();
+
     loop {
-        if let Some(chassis_vel) = CHASSIS_VEL_SIGNAL.try_take() {
+        if let Some(chassis_vel) = CHASSIS_VEL_CONTROL_SIGNAL.try_take() {
             // Compute wheel velocities from chassis velocities
             let wheel_vels = chassis_vel.inverse_kinematics();
             for (i, motor) in motors.iter_mut().enumerate() {
@@ -121,6 +127,19 @@ async fn kinematics_task(
         for (motor, signal) in zip(motors.iter_mut(), recv.iter_mut()) {
             motor.update(signal.try_get().unwrap_or(0));
         }
+
+        // Get displacement
+        let wheel_displ = WheelVector {
+            fl: motors[0].last_diff as f32 / PULSES_PER_MM,
+            rl: motors[1].last_diff as f32 / PULSES_PER_MM,
+            rr: motors[2].last_diff as f32 / PULSES_PER_MM,
+            fr: motors[3].last_diff as f32 / PULSES_PER_MM,
+        };
+
+        let chassis_displ = wheel_displ.forwards_kinematics();
+        let curr_displ = displ_recv.try_get().unwrap_or_default();
+
+        displ_sender.send(curr_displ * chassis_displ);
 
         ticker.next().await;
     }
@@ -303,12 +322,7 @@ async fn handle_commands<'d, T: Instance + 'd>(
     let mut buf = [0; 64];
     let mut dest = [0; 1024];
     let mut decoder = CobsDecoder::new(&mut dest);
-    let mut recv = [
-        ODOM_WATCH_FL.receiver().unwrap(),
-        ODOM_WATCH_RL.receiver().unwrap(),
-        ODOM_WATCH_RR.receiver().unwrap(),
-        ODOM_WATCH_FR.receiver().unwrap(),
-    ];
+    let mut recv = CHASSIS_DISPLACEMENT_WATCH.receiver().unwrap();
 
     loop {
         let n = class.read_packet(&mut buf).await?;
@@ -334,7 +348,7 @@ async fn handle_commands<'d, T: Instance + 'd>(
 
                         info!("Received controls: {} {} {} {}", x, y, w, dribbler_control);
 
-                        CHASSIS_VEL_SIGNAL.signal(ChassisVelocity {
+                        CHASSIS_VEL_CONTROL_SIGNAL.signal(ChassisVector {
                             x: (x as f32 * PULSES_PER_MM),
                             y: (y as f32 * PULSES_PER_MM),
                             w: (w as f32 * PI / 180.), // into rad/s
@@ -346,15 +360,13 @@ async fn handle_commands<'d, T: Instance + 'd>(
                         let mut out_buf = [0u8; 62];
                         let mut encoder = CobsEncoder::new(&mut out_buf);
 
-                        for odom in &mut recv {
-                            let Ok(_) = encoder.push(
-                                &((odom.try_get().unwrap_or(0) as f32 / PULSES_PER_MM) as i32)
-                                    .to_be_bytes(),
-                            ) else {
-                                warn!("Error encoding data!");
-                                continue 'outer;
-                            };
-                        }
+                        let odoms = recv.try_get().unwrap().as_array();
+                        let Ok(_) = encoder.push(&array::from_fn::<_, 12, _>(|i| {
+                            odoms[i / 4].to_be_bytes()[i % 4]
+                        })) else {
+                            warn!("Error encoding data!");
+                            continue 'outer;
+                        };
 
                         encoder.finalize();
                         class.write_packet(&[0]).await?;

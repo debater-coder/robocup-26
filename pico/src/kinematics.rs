@@ -2,20 +2,23 @@
 //! - https://research.ijcaonline.org/volume113/number3/pxc3901586.pdf
 //! - https://ecam-eurobot.github.io/Tutorials/mechanical/mecanum.html
 
+use core::ops::Mul;
+use micromath::F32Ext;
+
 const LX: f32 = 0.05; // Half-length X between wheels
 const LY: f32 = 0.05; // Half-length Y between wheels
 
-/// All velocities in mm/s
+/// All velocities in mm/s, displacement in mm
 #[derive(Debug, Clone, Copy)]
-pub struct WheelVelocities {
+pub struct WheelVector {
     pub fl: f32,
     pub rl: f32,
     pub rr: f32,
     pub fr: f32,
 }
 
-#[derive(Debug, Clone, Copy)]
-pub struct ChassisVelocity {
+#[derive(Debug, Clone, Copy, Default)]
+pub struct ChassisVector {
     /// in mm/s
     pub x: f32,
     /// in mm/s
@@ -24,26 +27,44 @@ pub struct ChassisVelocity {
     pub w: f32,
 }
 
-impl ChassisVelocity {
-    pub fn inverse_kinematics(&self) -> WheelVelocities {
+/// Composes chassis vectors
+impl Mul for ChassisVector {
+    type Output = Self;
+
+    fn mul(self, rhs: Self) -> Self::Output {
+        // (x + iy) * e^(iw) = (x + iy) * (cos w + isin w) = (xcos w - ysin w + i(ycos w + xsin w)
+        ChassisVector {
+            x: self.x + rhs.x * self.w.cos() - rhs.y * self.w.sin(),
+            y: self.y + rhs.y * self.w.cos() + rhs.x * self.w.sin(),
+            w: self.w + rhs.w,
+        }
+    }
+}
+
+impl ChassisVector {
+    pub fn inverse_kinematics(&self) -> WheelVector {
         let rotation = (LX + LY) * self.w;
 
-        return WheelVelocities {
+        return WheelVector {
             fl: (self.x - self.y - rotation),
             rl: (self.x + self.y + rotation),
             rr: (self.x + self.y - rotation),
             fr: (self.x - self.y + rotation),
         };
     }
+
+    pub fn as_array(&self) -> [f32; 3] {
+        [self.x, self.y, self.w]
+    }
 }
 
-impl WheelVelocities {
+impl WheelVector {
     pub fn as_array(&self) -> [f32; 4] {
         [self.fl, self.rl, self.rr, self.fr]
     }
 
-    pub fn forwards_kinematics(&self) -> ChassisVelocity {
-        return ChassisVelocity {
+    pub fn forwards_kinematics(&self) -> ChassisVector {
+        return ChassisVector {
             x: (self.fl + self.rl + self.rr + self.fr) / 4.,
             y: (-self.fl + self.rl + self.rr - self.fr) / 4.,
             w: (-self.fl + self.rl - self.rr + self.fr) / (4. * (LX + LY)),

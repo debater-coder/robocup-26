@@ -5,6 +5,7 @@ version = "0.1.0"
 license = "MIT OR Apache-2.0"
 
 [dependencies]
+micromath = "2.1.0"
 cortex-m = "0.7"
 cortex-m-rt = "0.7"
 embedded-hal = { version = "1.0.0" }
