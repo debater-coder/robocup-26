@@ -360,7 +360,7 @@ async fn handle_commands<'d, T: Instance + 'd>(
                         let mut out_buf = [0u8; 62];
                         let mut encoder = CobsEncoder::new(&mut out_buf);
 
-                        let odoms = recv.try_get().unwrap().as_array();
+                        let odoms = recv.try_get().unwrap().as_int_array();
                         let Ok(_) = encoder.push(&array::from_fn::<_, 12, _>(|i| {
                             odoms[i / 4].to_be_bytes()[i % 4]
                         })) else {

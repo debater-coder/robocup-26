@@ -30,7 +30,7 @@ rr.script_setup(args, "robocup")
 
 
 def post_tick(tree):
-    print("tick")
+    rr.log("blackboard", rr.TextDocument(py_trees.display.unicode_blackboard()))
 
 
 root = create_root()

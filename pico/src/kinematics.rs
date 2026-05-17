@@ -2,7 +2,7 @@
 //! - https://research.ijcaonline.org/volume113/number3/pxc3901586.pdf
 //! - https://ecam-eurobot.github.io/Tutorials/mechanical/mecanum.html
 
-use core::ops::Mul;
+use core::{f32::consts::PI, ops::Mul};
 use micromath::F32Ext;
 
 const LX: f32 = 0.05; // Half-length X between wheels
@@ -53,8 +53,9 @@ impl ChassisVector {
         };
     }
 
-    pub fn as_array(&self) -> [f32; 3] {
-        [self.x, self.y, self.w]
+    /// Returns as integer array, converts rad -> deg
+    pub fn as_int_array(&self) -> [i32; 3] {
+        [self.x as i32, self.y as i32, (self.w * 180. / PI) as i32]
     }
 }
 
