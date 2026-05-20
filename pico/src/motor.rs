@@ -34,7 +34,7 @@ impl Motor {
 
         let abs_speed = self.speed.abs();
         self.pwm
-            .set_duty_cycle_percent(if abs_speed > 5 { abs_speed } else { 0 } as u8)
+            .set_duty_cycle_percent(if abs_speed > 10 { abs_speed } else { 0 } as u8)
             .unwrap();
     }
 

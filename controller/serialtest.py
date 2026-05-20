@@ -60,7 +60,8 @@ def send_command(ser: serial.Serial, controls: list[int]):
     raise CommandFailedError("Failed to receive command response.")
 
 
-while True:
-    x = list(map(int, input("Controls (_ _ _ _) from -100 to 100: ").split(" ")))
-    periods = send_command(ser, x)
-    print(f"New odoms: {' '.join([f'{period} mm' for period in periods])}")
+if __name__ == "__main__":
+    while True:
+        x = list(map(int, input("Controls (_ _ _ _): ").split(" ")))
+        periods = send_command(ser, x)
+        print(f"New odoms: {' '.join([f'{period} mm' for period in periods])}")

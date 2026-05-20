@@ -5,8 +5,8 @@
 use core::{f32::consts::PI, ops::Mul};
 use micromath::F32Ext;
 
-const LX: f32 = 0.05; // Half-length X between wheels
-const LY: f32 = 0.05; // Half-length Y between wheels
+const LX: f32 = 80.; // Half-length X between wheels
+const LY: f32 = 140.; // Half-length Y between wheels
 
 /// All velocities in mm/s, displacement in mm
 #[derive(Debug, Clone, Copy)]
@@ -47,9 +47,9 @@ impl ChassisVector {
 
         return WheelVector {
             fl: (self.x - self.y - rotation),
-            rl: (self.x + self.y + rotation),
-            rr: (self.x + self.y - rotation),
-            fr: (self.x - self.y + rotation),
+            fr: (self.x + self.y + rotation),
+            rl: (self.x + self.y - rotation),
+            rr: (self.x - self.y + rotation),
         };
     }
 
@@ -67,8 +67,8 @@ impl WheelVector {
     pub fn forwards_kinematics(&self) -> ChassisVector {
         return ChassisVector {
             x: (self.fl + self.rl + self.rr + self.fr) / 4.,
-            y: (-self.fl + self.rl + self.rr - self.fr) / 4.,
-            w: (-self.fl + self.rl - self.rr + self.fr) / (4. * (LX + LY)),
+            y: (-self.fl + self.fr + self.rl - self.rr) / 4.,
+            w: (-self.fl + self.fr - self.rl + self.rr) / (4. * (LX + LY)),
         };
     }
 }
