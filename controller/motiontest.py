@@ -22,11 +22,7 @@ def go_to_setpoint(setpoint: npt.ArrayLike):
 
     print(odom)
 
-    odom = np.array(
-        send_command(
-            ser, [int(command_pos[0]), int(command_pos[1]), -int(angle_error * 10), 0]
-        )
-    )
+    odom = np.array(send_command(ser, [int(command_pos[0]), int(command_pos[1]), 0, 0]))
 
     return np.linalg.norm(error)
 

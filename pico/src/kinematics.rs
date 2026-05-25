@@ -6,8 +6,8 @@ use core::{f32::consts::PI, ops::Mul};
 use micromath::F32Ext;
 
 // TODO: fix half lengths;
-const LX: f32 = ; // Half-length X between wheels
-const LY: f32 = ; // Half-length Y between wheels
+const LX: f32 = 37.5; // Half-length X between wheels
+const LY: f32 = 65.; // Half-length Y between wheels
 
 /// All velocities in mm/s, displacement in mm
 #[derive(Debug, Clone, Copy)]
