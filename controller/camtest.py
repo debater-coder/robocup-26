@@ -4,11 +4,17 @@ https://stackoverflow.com/questions/66353952/how-to-pass-video-stream-from-one-p
 for shared memory explanation
 """
 
+import argparse
 from multiprocessing.shared_memory import SharedMemory
 from time import sleep
 
 import numpy as np
 import rerun as rr
+
+parser = argparse.ArgumentParser()
+rr.script_add_args(parser)
+args = parser.parse_args()
+rr.script_setup(args, "camtest")
 
 # Frame Shape
 frame_shape_shm = SharedMemory(name="frame_shape")
