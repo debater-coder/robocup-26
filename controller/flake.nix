@@ -22,13 +22,14 @@
             packages = [
               pkgs.uv
               pkgs.cmake
+	      pkgs.python314
+	      pkgs.stdenv.cc.cc
+    	      pkgs.zlib
+              pkgs.glibc
             ];
-
-            shellHook = ''
-                unset PYTHONPATH
-                uv sync
-              . .venv/bin/activate
-            '';
+	shellHook = ''
+	    export LD_LIBRARY_PATH="${pkgs.zlib}/lib:${pkgs.stdenv.cc.cc.lib}/lib:$LD_LIBRARY_PATH"
+	  '';
           };
         }
       );
