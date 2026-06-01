@@ -11,10 +11,8 @@ from time import sleep
 import numpy as np
 import rerun as rr
 
-parser = argparse.ArgumentParser()
-rr.script_add_args(parser)
-args = parser.parse_args()
-rr.script_setup(args, "camtest")
+rr.init("camtest")
+rr.serve_grpc()
 
 # Frame Shape
 frame_shape_shm = SharedMemory(name="frame_shape")
@@ -27,7 +25,7 @@ frame_buffer = np.ndarray(frame_shape, buffer=frame_buffer_shm.buf, dtype="u1")
 try:
     while True:
         rr.log("/camera/image", rr.Image(frame_buffer))
-        sleep(0.01)
+        sleep(0.05)
 finally:
     # cleanup: IMPORTANT the writer process should close before this one, so nothing
     #  tries to access the shm after unlink() is called. (less important on windows)
