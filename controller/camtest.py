@@ -24,7 +24,7 @@ frame_buffer = np.ndarray(frame_shape, buffer=frame_buffer_shm.buf, dtype="u1")
 
 try:
     while True:
-        rr.log("/camera/image", rr.Image(frame_buffer).compress())
+        rr.log("/camera/image", rr.Image(frame_buffer[:, :, :3]).compress())
         sleep(0.05)
 finally:
     # cleanup: IMPORTANT the writer process should close before this one, so nothing
