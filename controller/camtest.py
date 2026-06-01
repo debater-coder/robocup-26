@@ -12,7 +12,7 @@ import numpy as np
 import rerun as rr
 
 rr.init("camtest")
-rr.serve_grpc()
+rr.connect_grpc()
 
 # Frame Shape
 frame_shape_shm = SharedMemory(name="frame_shape")
