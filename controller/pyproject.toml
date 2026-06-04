@@ -7,7 +7,7 @@ requires-python = ">=3.10"
 dependencies = [
     "cobs>=1.2.2",
     "numpy>=2.2.6",
-    "opencv-python>=4.11.0.86",
+    "opencv-python-headless>=4.11.0.86",
     "py-trees>=2.4.0",
     "pyserial>=3.5",
     "requests>=2.33.1",
