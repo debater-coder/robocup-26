@@ -6,6 +6,8 @@ import rerun as rr
 
 from root import create_root
 
+print("Started.")
+
 parser = argparse.ArgumentParser(
     prog="Robocup controller",
     description="Controls a single Raspberry Pi to execute Robocup strategy.",
