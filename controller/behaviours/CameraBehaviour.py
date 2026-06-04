@@ -6,6 +6,7 @@ import numpy as np
 import py_trees
 import rerun as rr
 from cv2.typing import MatLike
+from time import sleep
 
 ORANGE_LOWER = np.array([0, 160, 120])
 ORANGE_UPPER = np.array([20, 255, 255])
@@ -16,15 +17,16 @@ class CameraBehaviour(py_trees.behaviour.Behaviour):
         super().__init__(name)
 
     def setup(self, **kwargs):
+        print("setup")
         # Frame Shape
-        frame_shape_shm = SharedMemory(name="frame_shape")
-        frame_shape = np.ndarray([3], buffer=frame_shape_shm.buf, dtype="i4")
+        self.frame_shape_shm = SharedMemory(name="frame_shape")
+        self.frame_shape = np.ndarray([3], buffer=self.frame_shape_shm.buf, dtype="i4")
 
         # Framebuffer
-        frame_buffer_shm = SharedMemory(name="frame_buffer")
+        self.frame_buffer_shm = SharedMemory(name="frame_buffer")
 
         self.frame_buffer = np.ndarray(
-            frame_shape, buffer=frame_buffer_shm.buf, dtype="u1"
+            self.frame_shape, buffer=self.frame_buffer_shm.buf, dtype="u1"
         )
 
     def initialise(self): ...
@@ -36,6 +38,7 @@ class CameraBehaviour(py_trees.behaviour.Behaviour):
         blurred = cv2.GaussianBlur(frame, (11, 11), 0)
         hsv = cv2.cvtColor(blurred, cv2.COLOR_RGB2HSV)
         mask = cv2.inRange(hsv, ORANGE_LOWER, ORANGE_UPPER)
+        rr.log("/camera/mask", rr.Image(mask).compress())
         mask = cv2.erode(mask, typing.cast(MatLike, None), iterations=2)
         mask = cv2.dilate(mask, typing.cast(MatLike, None), iterations=2)
         contours = cv2.findContours(

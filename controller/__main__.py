@@ -39,6 +39,8 @@ def post_tick(tree):
 
 
 tree = py_trees.trees.BehaviourTree(root)
-tree.setup(timeout=5)
+print("setup start")
+tree.setup()
+print("setup done")
 
-tree.tick_tock(period_ms=16, post_tick_handler=post_tick, number_of_iterations=py_trees.trees.CONTINUOUS_TICK_TOCK)
+tree.tick_tock(period_ms=50, post_tick_handler=post_tick, number_of_iterations=py_trees.trees.CONTINUOUS_TICK_TOCK)
