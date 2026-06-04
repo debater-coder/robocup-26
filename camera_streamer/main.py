@@ -12,7 +12,7 @@ from picamera2 import Picamera2
 
 cam = Picamera2()
 cam.start()
-frame = np.rot90(cam.capture_array(), k=3, axes=(0, 1))
+frame = np.rot90(cam.capture_array(), k=2, axes=(0, 1))
 
 
 # Shared memory for the frame dimensions

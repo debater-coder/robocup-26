@@ -1,5 +1,7 @@
 import py_trees
 
+from behaviours.CameraBehaviour import CameraBehaviour
+
 
 def create_root():
     """
@@ -16,5 +18,9 @@ def create_root():
     root = py_trees.composites.Parallel(
         name="Robocup Controller", policy=py_trees.common.ParallelPolicy.SuccessOnAll()
     )
+
+    camera = CameraBehaviour("Computer Vision")
+
+    root.add_children([camera])
 
     return root
