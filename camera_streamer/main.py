@@ -28,7 +28,7 @@ frame_buffer = np.ndarray(frame_shape, buffer=frame_buffer_shm.buf, dtype=frame.
 try:
     while True:
         frame_buffer[:] = np.rot90(
-            cam.capture_array(), k=3, axes=(0, 1)
+            cam.capture_array(), k=2, axes=(0, 1)
         )  # in place updating of the buffer
         sleep(0.01)
 finally:
