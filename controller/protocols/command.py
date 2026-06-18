@@ -1,18 +1,24 @@
 from abc import abstractmethod
-from typing import Protocol
+from typing import Protocol, runtime_checkable
 
 
+class CommandFailedError(Exception):
+    pass
+
+
+@runtime_checkable
 class SupportsCommand(Protocol):
     """Protocol for controlling robot via velocity commands."""
 
     @abstractmethod
-    def send_command(self, vx: float, vy: float, vw: float) -> None:
+    def send_command(self, vx: float, vy: float, vw: float, dribbler: float) -> None:
         """Sends a velocity command to the robot (relative to the robot).
 
         Arguments:
         vx -- velocity in the x direction (+ve = forwards) (mm/s)
         vy -- velocity in the y direction (+ve = left) (mm/s)
         vw -- angular velocity (+ve = anticlockwise) (rad/s)
+        dribbler -- -1 to 1
         """
         raise NotImplementedError
 

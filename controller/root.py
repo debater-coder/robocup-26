@@ -1,5 +1,6 @@
 import py_trees
 
+from behaviours.BallChaseBehaviour import BallChaseBehaviour
 from behaviours.CameraBehaviour import CameraBehaviour
 
 
@@ -19,8 +20,9 @@ def create_root():
         name="Robocup Controller", policy=py_trees.common.ParallelPolicy.SuccessOnAll()
     )
 
-    camera = CameraBehaviour("Computer Vision")
+    camera = CameraBehaviour("Camera")
+    ball_chase = BallChaseBehaviour("Ball Chase")
 
-    root.add_children([camera])
+    root.add_children([camera, ball_chase])
 
     return root

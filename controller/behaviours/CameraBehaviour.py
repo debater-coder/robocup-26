@@ -1,12 +1,12 @@
 import typing
 from multiprocessing.shared_memory import SharedMemory
+from time import sleep
 
 import cv2
 import numpy as np
 import py_trees
 import rerun as rr
 from cv2.typing import MatLike
-from time import sleep
 
 ORANGE_LOWER = np.array([0, 160, 120])
 ORANGE_UPPER = np.array([20, 255, 255])
@@ -15,6 +15,16 @@ ORANGE_UPPER = np.array([20, 255, 255])
 class CameraBehaviour(py_trees.behaviour.Behaviour):
     def __init__(self, name: str):
         super().__init__(name)
+
+        self.blackboard = self.attach_blackboard_client(name="Camera Behaviour")
+
+        self.blackboard.register_key(
+            "ball_centre", access=py_trees.common.Access.EXCLUSIVE_WRITE
+        )
+
+        self.blackboard.register_key(
+            "ball_radius", access=py_trees.common.Access.EXCLUSIVE_WRITE
+        )
 
     def setup(self, **kwargs):
         print("setup")
@@ -52,6 +62,12 @@ class CameraBehaviour(py_trees.behaviour.Behaviour):
                 "/camera/ball_circle",
                 rr.Ellipses2D(half_sizes=[(radius, radius)], centers=[(x, y)]),
             )
+
+            self.blackboard.ball_centre = (x, y)
+            self.blackboard.ball_radius = radius
+
+        else:
+            rr.log("/camera/ball_circle", rr.Clear(recursive=True))
 
         return py_trees.common.Status.RUNNING
 

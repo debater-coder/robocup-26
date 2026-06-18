@@ -1,6 +1,6 @@
 from abc import abstractmethod
 from dataclasses import dataclass
-from typing import Protocol
+from typing import Protocol, runtime_checkable
 
 
 @dataclass
@@ -27,6 +27,7 @@ class World:
     opponents: list[RobotState]
 
 
+@runtime_checkable
 class SupportsWorld(Protocol):
     """Protocol for receiving the state of the world"""
 
