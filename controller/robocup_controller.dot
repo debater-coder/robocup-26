@@ -8,15 +8,15 @@ Camera [label=Camera, shape=ellipse, style=filled, fillcolor=gray, fontsize=9, f
 "Robocup Controller" -> Camera;
 "Ball Chase" [label="Ball Chase", shape=ellipse, style=filled, fillcolor=gray, fontsize=9, fontcolor=black];
 "Robocup Controller" -> "Ball Chase";
-"/ball_centre" -> "Ball Chase" [color=green, constraint=false, weight=0];
-Camera -> "/ball_centre" [color=deepskyblue, constraint=false, weight=0];
 "/ball_radius" -> "Ball Chase" [color=green, constraint=false, weight=0];
-Camera -> "/ball_radius" [color=deepskyblue, constraint=false, weight=0];
+Camera -> "/ball_radius" [color=blue, constraint=false, weight=0];
+"/ball_centre" -> "Ball Chase" [color=green, constraint=false, weight=0];
+Camera -> "/ball_centre" [color=blue, constraint=false, weight=0];
 subgraph Blackboard {
 id=Blackboard;
 label=Blackboard;
 rank=sink;
-"/ball_centre" [label="/ball_centre: -", shape=box, style=filled, color=blue, fillcolor=white, fontsize=8, fontcolor=blue, width=0, height=0, fixedsize=false];
 "/ball_radius" [label="/ball_radius: -", shape=box, style=filled, color=blue, fillcolor=white, fontsize=8, fontcolor=blue, width=0, height=0, fixedsize=false];
+"/ball_centre" [label="/ball_centre: -", shape=box, style=filled, color=blue, fillcolor=white, fontsize=8, fontcolor=blue, width=0, height=0, fixedsize=false];
 }
 }

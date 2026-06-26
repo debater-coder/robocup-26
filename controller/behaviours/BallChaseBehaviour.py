@@ -30,13 +30,13 @@ class BallChaseBehaviour(py_trees.behaviour.Behaviour):
             )
 
     def update(self):
-        if (center := self.blackboard.ball_center) and (
+        if (centre := self.blackboard.ball_centre) and (
             radius := self.blackboard.ball_radius
         ):
-            if radius[0] > 300:
+            if centre[0] > 300:
                 self.command.send_command(100, 0.1, 0, 1)
                 self.feedback_message = "turning right"
-            elif radius[0] < 180:
+            elif centre[0] < 180:
                 self.command.send_command(100, -0.1, 0, 1)
                 self.feedback_message = "forwards"
             else:
