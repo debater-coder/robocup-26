@@ -36,7 +36,14 @@ rr.connect_grpc()
 
 
 def post_tick(tree):
-    rr.log("blackboard", rr.TextDocument(py_trees.display.unicode_blackboard()))
+    rr.log(
+        "blackboard",
+        rr.TextDocument(
+            py_trees.display.ascii_blackboard()
+            + "\n"
+            + py_trees.display.ascii_tree(tree)
+        ),
+    )
 
 
 tree = py_trees.trees.BehaviourTree(root)

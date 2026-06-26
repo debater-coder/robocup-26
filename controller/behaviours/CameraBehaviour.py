@@ -68,6 +68,8 @@ class CameraBehaviour(py_trees.behaviour.Behaviour):
 
         else:
             rr.log("/camera/ball_circle", rr.Clear(recursive=True))
+            self.blackboard.ball_centre = None
+            self.blackboard.ball_radius = None
 
         return py_trees.common.Status.RUNNING
 
