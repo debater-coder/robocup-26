@@ -1,5 +1,6 @@
 import math
 
+import rerun as rr
 import serial
 from cobs import cobs
 
@@ -74,6 +75,10 @@ class PicoCommand(SupportsCommand):
         """
         self.command = (int(vx), int(vy), int(math.degrees(vw)), int(dribbler * 100))
         self.send_packet(self.command)
+        rr.log("/pico/command/vx", rr.Scalars(vx))
+        rr.log("/pico/command/vy", rr.Scalars(vy))
+        rr.log("/pico/command/vw", rr.Scalars(vw))
+        rr.log("/pico/command/dribbler", rr.Scalars(dribbler))
 
     def get_odometry(self) -> tuple[float, float, float]:
         """Returns the current odometry of the robot.
