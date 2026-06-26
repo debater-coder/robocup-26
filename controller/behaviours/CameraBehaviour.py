@@ -18,13 +18,9 @@ class CameraBehaviour(py_trees.behaviour.Behaviour):
 
         self.blackboard = self.attach_blackboard_client(name="Camera Behaviour")
 
-        self.blackboard.register_key(
-            "ball_centre", access=py_trees.common.Access.EXCLUSIVE_WRITE
-        )
+        self.blackboard.register_key("ball_centre", access=py_trees.common.Access.WRITE)
 
-        self.blackboard.register_key(
-            "ball_radius", access=py_trees.common.Access.EXCLUSIVE_WRITE
-        )
+        self.blackboard.register_key("ball_radius", access=py_trees.common.Access.WRITE)
 
     def setup(self, **kwargs):
         print("setup")
