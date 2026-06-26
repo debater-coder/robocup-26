@@ -41,7 +41,7 @@ def post_tick(tree):
         rr.TextDocument(
             py_trees.display.ascii_blackboard()
             + "\n"
-            + py_trees.display.ascii_tree(tree)
+            + py_trees.display.ascii_tree(root)
         ),
     )
 
