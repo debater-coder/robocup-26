@@ -100,6 +100,12 @@ impl MotorFeedback {
             return;
         }
 
+        // Hard cuttoff at target 0
+        if self.target == 0 {
+            self.motor.set_speed(0);
+            return;
+        }
+
         // Pulses / s
         let speed = (self.last_diff * 1000) / elapsed.as_millis() as i32;
         info!(
