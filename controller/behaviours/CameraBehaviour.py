@@ -25,11 +25,11 @@ class CameraBehaviour(py_trees.behaviour.Behaviour):
     def setup(self, **kwargs):
         print("setup")
         # Frame Shape
-        self.frame_shape_shm = SharedMemory(name="frame_shape")
+        self.frame_shape_shm = SharedMemory(name="frame_shape", track=False)
         self.frame_shape = np.ndarray([3], buffer=self.frame_shape_shm.buf, dtype="i4")
 
         # Framebuffer
-        self.frame_buffer_shm = SharedMemory(name="frame_buffer")
+        self.frame_buffer_shm = SharedMemory(name="frame_buffer", track=False)
 
         self.frame_buffer = np.ndarray(
             self.frame_shape, buffer=self.frame_buffer_shm.buf, dtype="u1"

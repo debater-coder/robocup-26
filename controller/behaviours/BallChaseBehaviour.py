@@ -34,14 +34,14 @@ class BallChaseBehaviour(py_trees.behaviour.Behaviour):
             radius := self.blackboard.ball_radius
         ):
             if centre[0] > 300:
-                self.command.send_command(100, 4, 0, 1)
+                self.command.send_command(100, 0, 4, 1)
                 self.feedback_message = "turning right"
             elif centre[0] < 180:
-                self.command.send_command(100, -0.1, 0, 1)
-                self.feedback_message = "forwards"
-            else:
-                self.command.send_command(100, 0, 0, 1)
+                self.command.send_command(100, 0, -4, 1)
                 self.feedback_message = "turning left"
+            else:
+                self.command.send_command(200, 0, 0, 1)
+                self.feedback_message = "forwards"
 
         else:
             self.command.send_command(0, 0, 10, 0)
