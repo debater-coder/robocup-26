@@ -20,7 +20,7 @@ use embassy_rp::watchdog::Watchdog;
 use embassy_sync::blocking_mutex::raw::CriticalSectionRawMutex;
 use embassy_sync::signal::Signal;
 use embassy_sync::watch::Watch;
-use embassy_time::{Duration, Ticker, Timer};
+use embassy_time::{with_timeout, Duration, Instant, Ticker, Timer};
 use embassy_usb::class::cdc_acm::{CdcAcmClass, State};
 use embassy_usb::driver::EndpointError;
 use embassy_usb::{Builder, Config};
@@ -91,7 +91,10 @@ macro_rules! odom_task {
 #[embassy_executor::task]
 async fn dribbler_task(mut dribbler: Motor) {
     loop {
-        dribbler.set_speed(DRIBBLER_CONTROL_SIGNAL.wait().await);
+        let next_speed = with_timeout(Duration::from_millis(500), DRIBBLER_CONTROL_SIGNAL.wait())
+            .await
+            .unwrap_or(0);
+        dribbler.set_speed(next_speed);
     }
 }
 
@@ -114,6 +117,8 @@ async fn kinematics_task(
     let displ_sender = CHASSIS_DISPLACEMENT_WATCH.sender();
     let mut displ_recv = CHASSIS_DISPLACEMENT_WATCH.receiver().unwrap();
 
+    let mut last_command = Instant::now();
+
     loop {
         if let Some(chassis_vel) = CHASSIS_VEL_CONTROL_SIGNAL.try_take() {
             // Compute wheel velocities from chassis velocities
@@ -121,6 +126,15 @@ async fn kinematics_task(
             for (i, motor) in motors.iter_mut().enumerate() {
                 motor.target = wheel_vels.as_array()[i] as i32;
                 info!("motor {} speed {}", i, wheel_vels.as_array()[i] as i32);
+            }
+
+            last_command = Instant::now();
+        } else {
+            if last_command.elapsed() > Duration::from_millis(500) {
+                for (i, motor) in motors.iter_mut().enumerate() {
+                    motor.target = 0;
+                    info!("motor {} speed {}", i, 0);
+                }
             }
         }
 
