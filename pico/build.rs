@@ -8,10 +8,10 @@
 //! updating `memory.x` ensures a rebuild of the application with the
 //! new memory settings.
 
-use std::env;
 use std::fs::File;
 use std::io::Write;
 use std::path::PathBuf;
+use std::{env, fs};
 
 fn main() {
     // Put `memory.x` in our output directory and ensure it's
@@ -22,6 +22,24 @@ fn main() {
         .write_all(include_bytes!("memory.x"))
         .unwrap();
     println!("cargo:rustc-link-search={}", out.display());
+
+    let mut build = cc::Build::new();
+
+    if let Ok(entries) = fs::read_dir("c_src") {
+        for entry in entries.flatten() {
+            let path = entry.path();
+            if path.extension().is_some_and(|s| s == "c") {
+                build.file(&path);
+            }
+        }
+    }
+
+    build
+        .include("c_src")
+        .compiler("arm-none-eabi-gcc")
+        .flag("-mcpu=cortex-m0plus")
+        .flag("-mthumb")
+        .compile("c_lib");
 
     // By default, Cargo will re-run a build script whenever
     // any file in the project changes. By specifying `memory.x`

@@ -22,8 +22,13 @@
               flip-link
               minicom
               rustup
+              gcc-arm-embedded
             ];
           };
+
+          shellHook = ''
+            export ARM_SYSROOT="${pkgs.gcc-arm-embedded}/arm-none-eabi"
+          '';
         }
       );
     };
