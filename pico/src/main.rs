@@ -7,6 +7,7 @@ use core::iter::zip;
 
 use crate::kinematics::{ChassisVector, WheelVector};
 use crate::motor::{Motor, MotorFeedback};
+use crate::vl53l3cx::bindings::VL53LX_Dev_t;
 use cobs::{CobsDecoder, CobsEncoder};
 use embassy_executor::Spawner;
 use embassy_futures::join::join;
@@ -169,6 +170,18 @@ async fn feed_watchdog(mut watchdog: Watchdog) {
     }
 }
 
+#[embassy_executor::task]
+async fn poll_sensor(mut device: VL53LX_Dev_t) {
+    loop {
+        vl53l3cx::get_measurement_data_blocking(&mut device).map_err(|e| {
+            error!("err poll sensor {}", e);
+            e
+        });
+
+        Timer::after_millis(200).await;
+    }
+}
+
 #[embassy_executor::main]
 async fn main(spawner: Spawner) {
     let p = embassy_rp::init(Default::default());
@@ -307,6 +320,14 @@ async fn main(spawner: Spawner) {
 
     // Run the USB device.
     let usb_fut = usb.run();
+
+    // Init sensor device
+    let device = vl53l3cx::init()
+        .map_err(|e| {
+            error!("could not init sensor device {e}", e);
+            e
+        })
+        .unwrap();
 
     let command_fut = async {
         loop {

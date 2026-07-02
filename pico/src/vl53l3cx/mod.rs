@@ -14,7 +14,7 @@ use crate::vl53l3cx::bindings::{
     VL53LX_MultiRangingData_t, VL53LX_StartMeasurement, VL53LX_WaitDeviceBooted,
 };
 
-mod bindings;
+pub mod bindings;
 
 static I2C_INSTANCE: OnceCell<I2c<'static, I2C0, Blocking>> = OnceCell::new();
 
