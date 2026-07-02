@@ -23,6 +23,7 @@
               minicom
               rustup
               gcc-arm-embedded
+              rust-bindgen
             ];
           };
 

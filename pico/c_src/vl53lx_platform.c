@@ -19,15 +19,6 @@
 /**
  * ROBOCUP IMPL
  */
-typedef struct {
-  VL53LX_Error (*writeMulti)(uint8_t i2c_address, uint16_t index,
-                             uint8_t *pdata, uint32_t count);
-  VL53LX_Error (*readMulti)(uint8_t i2c_address, uint16_t index, uint8_t *pdata,
-                            uint32_t count);
-  void (*waitUs)(int32_t wait_us);
-  void (*waitMs)(int32_t wait_ms);
-  uint32_t (*getTickCount)();
-} Robocup_Platform_t;
 
 Robocup_Platform_t *robocup_platform_instance;
 

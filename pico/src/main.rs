@@ -33,6 +33,7 @@ use encoder::{Direction, PioEncoder, PioEncoderProgram};
 mod encoder;
 mod kinematics;
 mod motor;
+mod vl53l3cx;
 
 bind_interrupts!(struct Irqs {
     PIO0_IRQ_0 => embassy_rp::pio::InterruptHandler<PIO0>;
