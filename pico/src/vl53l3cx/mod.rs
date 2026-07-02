@@ -3,20 +3,24 @@ use core::{cell::OnceCell, slice};
 use embassy_rp::{
     i2c::{Blocking, I2c},
     peripherals::I2C0,
+    spinlock_mutex::SpinlockRawMutex,
 };
+use embassy_sync::blocking_mutex::{raw::NoopRawMutex, Mutex};
 use embassy_time::{Delay, Instant};
 use embedded_hal::delay::DelayNs;
-use log::{info, warn};
+use log::{error, info, warn};
 
 use crate::vl53l3cx::bindings::{
-    Robocup_PlatformInit, Robocup_Platform_t, VL53LX_DataInit, VL53LX_DevData_t, VL53LX_Dev_t,
-    VL53LX_Error, VL53LX_GetMeasurementDataReady, VL53LX_GetMultiRangingData,
-    VL53LX_MultiRangingData_t, VL53LX_StartMeasurement, VL53LX_WaitDeviceBooted,
+    Robocup_PlatformInit, Robocup_Platform_t, VL53LX_ClearInterruptAndStartMeasurement,
+    VL53LX_DataInit, VL53LX_DevData_t, VL53LX_Dev_t, VL53LX_Error, VL53LX_GetMeasurementDataReady,
+    VL53LX_GetMultiRangingData, VL53LX_MultiRangingData_t, VL53LX_StartMeasurement,
+    VL53LX_WaitDeviceBooted,
 };
 
 pub mod bindings;
 
-static I2C_INSTANCE: OnceCell<I2c<'static, I2C0, Blocking>> = OnceCell::new();
+static I2C_INSTANCE: Mutex<SpinlockRawMutex<2>, OnceCell<I2c<'static, I2C0, Blocking>>> =
+    Mutex::new(OnceCell::new());
 
 unsafe extern "C" fn write_multi(
     i2c_address: u8,
@@ -37,12 +41,18 @@ unsafe extern "C" fn write_multi(
     tx_buffer[1] = index_bytes[1];
 
     tx_buffer[2..total_len].copy_from_slice(slice::from_raw_parts(pdata, count as usize));
-    info!("write_multi: address: {:x}, index: {:x} tx_buffer: {:?}");
+    info!(
+        "write_multi: address: {:x}, index: {:x} tx_buffer: {:?}",
+        i2c_address, index, tx_buffer
+    );
 
-    I2C_INSTANCE
-        .get()
-        .unwrap()
-        .blocking_write(address, &tx_buffer[..total_len]);
+    unsafe {
+        I2C_INSTANCE.lock_mut(|i| {
+            i.get_mut()
+                .unwrap()
+                .blocking_write(i2c_address, &tx_buffer[..total_len])
+        })
+    };
 
     return 0;
 }
@@ -57,15 +67,17 @@ unsafe extern "C" fn read_multi(
 
     let dest_slice = slice::from_raw_parts_mut(pdata, count as usize);
 
-    match I2C_INSTANCE
-        .get()
-        .unwrap()
-        .blocking_write_read(address, &index_bytes, dest_slice)
-    {
+    match unsafe {
+        I2C_INSTANCE.lock_mut(|i| {
+            i.get_mut()
+                .unwrap()
+                .blocking_write_read(i2c_address, &index_bytes, dest_slice)
+        })
+    } {
         Ok(_) => {
             info!(
                 "read_multi: address: {:x}, index: {:x}, read {} bytes",
-                address, index, count
+                i2c_address, index, count
             );
             0
         }
@@ -153,7 +165,7 @@ pub fn get_measurement_data_blocking(
 
                 info!("clear interupt status: {}", status);
 
-                return OK(ranging_data);
+                return Ok(ranging_data);
             } else {
                 warn!("in loop: status {}, {}", status, new_data_ready);
                 delay.delay_ms(1);

@@ -25,7 +25,7 @@ use embassy_time::{with_timeout, Duration, Instant, Ticker, Timer};
 use embassy_usb::class::cdc_acm::{CdcAcmClass, State};
 use embassy_usb::driver::EndpointError;
 use embassy_usb::{Builder, Config};
-use log::{info, warn};
+use log::{error, info, warn};
 
 use {defmt_rtt as _, panic_probe as _};
 
@@ -321,10 +321,11 @@ async fn main(spawner: Spawner) {
     // Run the USB device.
     let usb_fut = usb.run();
 
-    // Init sensor device
+    // // Init sensor device
     let device = vl53l3cx::init()
         .map_err(|e| {
-            error!("could not init sensor device {e}", e);
+            error!("could not init sensor device {e}");
+            loop {}
             e
         })
         .unwrap();
