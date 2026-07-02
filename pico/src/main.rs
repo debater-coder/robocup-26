@@ -2,6 +2,7 @@
 #![no_main]
 
 use core::array;
+use core::convert::Infallible;
 use core::f32::consts::PI;
 use core::iter::zip;
 
@@ -11,21 +12,24 @@ use crate::vl53l3cx::bindings::VL53LX_Dev_t;
 use cobs::{CobsDecoder, CobsEncoder};
 use embassy_executor::Spawner;
 use embassy_futures::join::join;
-use embassy_rp::bind_interrupts;
 use embassy_rp::gpio::{Level, Output};
 use embassy_rp::peripherals::{PIO0, USB};
 use embassy_rp::pio::Pio;
 use embassy_rp::pwm::Pwm;
 use embassy_rp::usb::{Driver, Instance};
 use embassy_rp::watchdog::Watchdog;
+use embassy_rp::{bind_interrupts, i2c};
 use embassy_sync::blocking_mutex::raw::CriticalSectionRawMutex;
 use embassy_sync::signal::Signal;
 use embassy_sync::watch::Watch;
-use embassy_time::{with_timeout, Duration, Instant, Ticker, Timer};
+use embassy_time::{with_timeout, Delay, Duration, Instant, Ticker, Timer};
 use embassy_usb::class::cdc_acm::{CdcAcmClass, State};
 use embassy_usb::driver::EndpointError;
 use embassy_usb::{Builder, Config};
+use embedded_hal::digital::{ErrorType, OutputPin};
 use log::{error, info, warn};
+use rp_pico::hal::gpio::DynFunction::I2c;
+use vl53l0x_simple::Vl53l0x;
 
 use {defmt_rtt as _, panic_probe as _};
 
@@ -159,6 +163,21 @@ async fn kinematics_task(
 
         ticker.next().await;
     }
+}
+
+struct NoopOutput;
+impl OutputPin for NoopOutput {
+    fn set_low(&mut self) -> Result<(), Self::Error> {
+        Ok(())
+    }
+
+    fn set_high(&mut self) -> Result<(), Self::Error> {
+        Ok(())
+    }
+}
+
+impl ErrorType for NoopOutput {
+    type Error = Infallible;
 }
 
 /// This will allow resets in case of panic (but not any other type of hand)
@@ -321,14 +340,21 @@ async fn main(spawner: Spawner) {
     // Run the USB device.
     let usb_fut = usb.run();
 
-    // // Init sensor device
-    let device = vl53l3cx::init()
-        .map_err(|e| {
-            error!("could not init sensor device {e}");
-            loop {}
-            e
-        })
-        .unwrap();
+    let sda = p.PIN_16;
+    let scl = p.PIN_17;
+    let i2c = i2c::I2c::new_blocking(p.I2C0, scl, sda, i2c::Config::default());
+
+    let mut tof =
+        Vl53l0x::new(i2c, NoopOutput, vl53l0x_simple::DEFAULT_ADDRESS, &mut Delay).unwrap();
+
+    let tof_fut = async {
+        loop {
+            if let Some(reading) = tof.try_read().unwrap() {
+                info!("Distance: {}mm", reading);
+            }
+            Timer::after_millis(100).await;
+        }
+    };
 
     let command_fut = async {
         loop {
@@ -339,7 +365,7 @@ async fn main(spawner: Spawner) {
         }
     };
 
-    join(usb_fut, join(command_fut, log_fut)).await;
+    join(tof_fut, join(usb_fut, join(command_fut, log_fut))).await;
 }
 
 struct Disconnected {}

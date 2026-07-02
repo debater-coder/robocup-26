@@ -23,24 +23,6 @@ fn main() {
         .unwrap();
     println!("cargo:rustc-link-search={}", out.display());
 
-    let mut build = cc::Build::new();
-
-    if let Ok(entries) = fs::read_dir("c_src") {
-        for entry in entries.flatten() {
-            let path = entry.path();
-            if path.extension().is_some_and(|s| s == "c") {
-                build.file(&path);
-            }
-        }
-    }
-
-    build
-        .include("c_src")
-        .compiler("arm-none-eabi-gcc")
-        .flag("-mcpu=cortex-m0plus")
-        .flag("-mthumb")
-        .compile("c_lib");
-
     // By default, Cargo will re-run a build script whenever
     // any file in the project changes. By specifying `memory.x`
     // here, we ensure the build script is only re-run when
