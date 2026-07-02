@@ -54,6 +54,7 @@ def send_command(ser: serial.Serial, controls: list[int]):
                 int.from_bytes(response[:4], "big", signed=True),
                 int.from_bytes(response[4:8], "big", signed=True),
                 int.from_bytes(response[8:12], "big", signed=True),
+                int.from_bytes(response[12:14], "big", signed=False),
             ]
         print("No response received, retrying...")
 
@@ -64,4 +65,4 @@ if __name__ == "__main__":
     while True:
         x = list(map(int, input("Controls (_ _ _ _): ").split(" ")))
         periods = send_command(ser, x)
-        print(f"New odoms: {' '.join([f'{period} mm' for period in periods])}")
+        print(f"New data: {' '.join([f'{period} mm' for period in periods])}")
