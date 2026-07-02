@@ -8,7 +8,6 @@ use core::iter::zip;
 
 use crate::kinematics::{ChassisVector, WheelVector};
 use crate::motor::{Motor, MotorFeedback};
-use crate::vl53l3cx::bindings::VL53LX_Dev_t;
 use cobs::{CobsDecoder, CobsEncoder};
 use embassy_executor::Spawner;
 use embassy_futures::join::join;
@@ -28,7 +27,6 @@ use embassy_usb::driver::EndpointError;
 use embassy_usb::{Builder, Config};
 use embedded_hal::digital::{ErrorType, OutputPin};
 use log::{error, info, warn};
-use rp_pico::hal::gpio::DynFunction::I2c;
 use vl53l0x_simple::Vl53l0x;
 
 use {defmt_rtt as _, panic_probe as _};
@@ -38,7 +36,6 @@ use encoder::{Direction, PioEncoder, PioEncoderProgram};
 mod encoder;
 mod kinematics;
 mod motor;
-mod vl53l3cx;
 
 bind_interrupts!(struct Irqs {
     PIO0_IRQ_0 => embassy_rp::pio::InterruptHandler<PIO0>;
@@ -50,6 +47,7 @@ static CHASSIS_VEL_CONTROL_SIGNAL: Signal<CriticalSectionRawMutex, ChassisVector
 static CHASSIS_DISPLACEMENT_WATCH: Watch<CriticalSectionRawMutex, ChassisVector, 4> = Watch::new();
 
 static DRIBBLER_CONTROL_SIGNAL: Signal<CriticalSectionRawMutex, i32> = Signal::new();
+static TOF_DISTANCE_SIGNAL: Signal<CriticalSectionRawMutex, u16> = Signal::new();
 
 static ODOM_WATCH_FL: Watch<CriticalSectionRawMutex, i32, 8> = Watch::new();
 static ODOM_WATCH_FR: Watch<CriticalSectionRawMutex, i32, 8> = Watch::new();
@@ -131,7 +129,6 @@ async fn kinematics_task(
             let wheel_vels = chassis_vel.inverse_kinematics();
             for (i, motor) in motors.iter_mut().enumerate() {
                 motor.target = wheel_vels.as_array()[i] as i32;
-                info!("motor {} speed {}", i, wheel_vels.as_array()[i] as i32);
             }
 
             last_command = Instant::now();
@@ -139,7 +136,6 @@ async fn kinematics_task(
             if last_command.elapsed() > Duration::from_millis(500) {
                 for (i, motor) in motors.iter_mut().enumerate() {
                     motor.target = 0;
-                    info!("motor {} speed {}", i, 0);
                 }
             }
         }
@@ -186,18 +182,6 @@ async fn feed_watchdog(mut watchdog: Watchdog) {
     loop {
         watchdog.feed();
         Timer::after_millis(100).await;
-    }
-}
-
-#[embassy_executor::task]
-async fn poll_sensor(mut device: VL53LX_Dev_t) {
-    loop {
-        vl53l3cx::get_measurement_data_blocking(&mut device).map_err(|e| {
-            error!("err poll sensor {}", e);
-            e
-        });
-
-        Timer::after_millis(200).await;
     }
 }
 
@@ -344,15 +328,16 @@ async fn main(spawner: Spawner) {
     let scl = p.PIN_17;
     let i2c = i2c::I2c::new_blocking(p.I2C0, scl, sda, i2c::Config::default());
 
-    let mut tof =
-        Vl53l0x::new(i2c, NoopOutput, vl53l0x_simple::DEFAULT_ADDRESS, &mut Delay).unwrap();
+    let mut tof = Vl53l0x::new(i2c, NoopOutput, vl53l0x_simple::DEFAULT_ADDRESS, &mut Delay);
 
     let tof_fut = async {
-        loop {
-            if let Some(reading) = tof.try_read().unwrap() {
-                info!("Distance: {}mm", reading);
+        if let Ok(tof) = &mut tof {
+            loop {
+                if let Ok(Some(reading)) = tof.try_read() {
+                    TOF_DISTANCE_SIGNAL.signal(reading);
+                }
+                Timer::after_millis(100).await;
             }
-            Timer::after_millis(100).await;
         }
     };
 
@@ -424,9 +409,14 @@ async fn handle_commands<'d, T: Instance + 'd>(
                         let mut encoder = CobsEncoder::new(&mut out_buf);
 
                         let odoms = recv.try_get().unwrap().as_int_array();
-                        let Ok(_) = encoder.push(&array::from_fn::<_, 12, _>(|i| {
-                            odoms[i / 4].to_be_bytes()[i % 4]
-                        })) else {
+                        let tof_reading = TOF_DISTANCE_SIGNAL.try_take().unwrap_or(0);
+
+                        let Ok(_) = encoder
+                            .push(&array::from_fn::<_, 12, _>(|i| {
+                                odoms[i / 4].to_be_bytes()[i % 4]
+                            }))
+                            .and_then(|_| encoder.push(&tof_reading.to_be_bytes()))
+                        else {
                             warn!("Error encoding data!");
                             continue 'outer;
                         };

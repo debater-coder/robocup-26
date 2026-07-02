@@ -30,6 +30,8 @@ class BallChaseBehaviour(py_trees.behaviour.Behaviour):
             )
 
     def update(self):
+        tof = self.command.get_ball_tof()
+
         if (centre := self.blackboard.ball_centre) and (
             radius := self.blackboard.ball_radius
         ):

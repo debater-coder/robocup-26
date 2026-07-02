@@ -39,3 +39,10 @@ class SupportsCommand(Protocol):
         w -- relative angle in radians (+ve = anticlockwise)
         """
         raise NotImplementedError
+
+    @abstractmethod
+    def get_ball_tof(self) -> int | None:
+        """
+        Returns the TOF from ball sensor as integer or None if not available
+        """
+        raise NotImplementedError

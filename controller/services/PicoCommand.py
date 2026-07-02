@@ -59,6 +59,7 @@ class PicoCommand(SupportsCommand):
                     int.from_bytes(response[:4], "big", signed=True),
                     int.from_bytes(response[4:8], "big", signed=True),
                     int.from_bytes(response[8:12], "big", signed=True),
+                    int.from_bytes(response[12:14], "big", signed=False),
                 )
             print("No response received, retrying...")
 
@@ -74,7 +75,7 @@ class PicoCommand(SupportsCommand):
         dribbler -- -1 to 1
         """
         self.command = (int(vx), int(vy), int(math.degrees(vw)), int(dribbler * 100))
-        self.send_packet(self.command)
+        self.res = self.send_packet(self.command)
         rr.log("/pico/command/vx", rr.Scalars(vx))
         rr.log("/pico/command/vy", rr.Scalars(vy))
         rr.log("/pico/command/vw", rr.Scalars(vw))
@@ -95,6 +96,16 @@ class PicoCommand(SupportsCommand):
         y -- odometry n the y direction in m (+ve = left)
         w -- relative angle in radians (+ve = anticlockwise)
         """
-        res = self.send_packet(self.command)
+        return (self.res[0], self.res[1], math.radians(self.res[2]))
 
-        return (res[0], res[1], math.radians(res[2]))
+    def get_ball_tof(self) -> int | None:
+        """
+        Returns the TOF from ball sensor as integer or None if not available
+        """
+        tof = None if self.res[3] == 0 else self.res[3]
+        if tof:
+            rr.log("/pico/tof", rr.Scalars(tof))
+        else:
+            rr.log("/pico/tof", rr.Clear(recursive=True))
+
+        return tof
