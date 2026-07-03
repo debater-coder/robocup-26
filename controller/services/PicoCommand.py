@@ -74,9 +74,9 @@ class PicoCommand(SupportsCommand):
         vx -- velocity in the x direction (+ve = forwards) (mm/s)
         vy -- velocity in the y direction (+ve = left) (mm/s)
         vw -- angular velocity (+ve = anticlockwise) (rad/s)
-        dribbler -- -1 to 1
+        dribbler -- -1 to 1 (+ve is attractive)
         """
-        self.command = (int(vx), int(vy), int(math.degrees(vw)), int(dribbler * 100))
+        self.command = (int(vx), int(vy), int(math.degrees(vw)), -int(dribbler * 100))
         self.res = self.send_packet(self.command)
         rr.log("/pico/command/vx", rr.Scalars(vx))
         rr.log("/pico/command/vy", rr.Scalars(vy))
