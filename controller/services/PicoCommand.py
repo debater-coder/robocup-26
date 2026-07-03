@@ -16,6 +16,8 @@ class PicoCommand(SupportsCommand):
         self.ser = serial.Serial("/dev/ttyACM0", timeout=0.02, write_timeout=0.02)
         self.command = (0, 0, 0, 0)
 
+        self.res = [0, 0, 0, 0]
+
     def read_cobs_packet(self):
         buf = bytearray()
 
