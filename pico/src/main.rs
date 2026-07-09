@@ -11,7 +11,7 @@ use crate::motor::{Motor, MotorFeedback};
 use cobs::{CobsDecoder, CobsEncoder};
 use embassy_executor::Spawner;
 use embassy_futures::join::join;
-use embassy_rp::gpio::{Level, Output};
+use embassy_rp::gpio::{Input, Level, Output, Pull};
 use embassy_rp::peripherals::{PIO0, USB};
 use embassy_rp::pio::Pio;
 use embassy_rp::pwm::Pwm;
@@ -341,11 +341,21 @@ async fn main(spawner: Spawner) {
         }
     };
 
+    let left_ir = Input::new(p.PIN_10, Pull::None);
+    let back_ir = Input::new(p.PIN_15, Pull::None);
+    let right_ir = Input::new(p.PIN_18, Pull::None);
+
     let command_fut = async {
         loop {
             class.wait_connection().await;
             log::info!("Connected");
-            let _ = handle_commands(&mut class).await;
+            let _ = handle_commands(
+                &mut class,
+                (left_ir.get_level() as u8)
+                    | ((back_ir.get_level() as u8) << 1)
+                    | ((right_ir.get_level() as u8) << 2),
+            )
+            .await;
             log::info!("Disconnected");
         }
     };
@@ -366,6 +376,7 @@ impl From<EndpointError> for Disconnected {
 
 async fn handle_commands<'d, T: Instance + 'd>(
     class: &mut CdcAcmClass<'d, Driver<'d, T>>,
+    ir_info: u8,
 ) -> Result<(), Disconnected> {
     let mut buf = [0; 64];
     let mut dest = [0; 1024];
@@ -416,6 +427,7 @@ async fn handle_commands<'d, T: Instance + 'd>(
                                 odoms[i / 4].to_be_bytes()[i % 4]
                             }))
                             .and_then(|_| encoder.push(&tof_reading.to_be_bytes()))
+                            .and_then(|_| encoder.push(&[ir_info]))
                         else {
                             warn!("Error encoding data!");
                             continue 'outer;
