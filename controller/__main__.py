@@ -3,7 +3,6 @@ import sys
 
 import py_trees
 import rerun as rr
-from gpiozero.pins.pigpio import PiGPIOFactory
 
 from root import create_root
 from services.PicoCommand import PicoCommand
@@ -52,7 +51,7 @@ def post_tick(tree):
 
 tree = py_trees.trees.BehaviourTree(root)
 print("setup start")
-tree.setup(command=PicoCommand(), pin_factory=PiGPIOFactory(host="localhost"))
+tree.setup(command=PicoCommand())
 print("setup done")
 
 tree.tick_tock(
