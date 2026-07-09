@@ -39,9 +39,12 @@ def post_tick(tree):
     rr.log(
         "blackboard",
         rr.TextDocument(
-            py_trees.display.ascii_blackboard()
+            "```"
+            + py_trees.display.ascii_blackboard()
             + "\n-----------------------------\n"
             + py_trees.display.ascii_tree(root, show_status=True)
+            + "```",
+            media_type="text/markdown",
         ),
     )
 
