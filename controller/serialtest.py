@@ -55,6 +55,7 @@ def send_command(ser: serial.Serial, controls: list[int]):
                 int.from_bytes(response[4:8], "big", signed=True),
                 int.from_bytes(response[8:12], "big", signed=True),
                 int.from_bytes(response[12:14], "big", signed=False),
+                int(response[14]),
             ]
         print("No response received, retrying...")
 
