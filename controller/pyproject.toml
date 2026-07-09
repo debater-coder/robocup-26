@@ -9,6 +9,7 @@ dependencies = [
     "gpiozero>=2.0.1",
     "numpy>=2.2.6",
     "opencv-python-headless>=4.11.0.86",
+    "pigpio>=1.78",
     "py-trees>=2.4.0",
     "pyserial>=3.5",
     "requests>=2.33.1",
