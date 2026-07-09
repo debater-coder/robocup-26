@@ -12,7 +12,7 @@ class StopGoBehaviour(py_trees.behaviour.Behaviour):
         self.button = Button(26)
 
     def update(self):
-        if self.button.is_active:
+        if not self.button.is_active:
             self.feedback_message = "GO"
             return py_trees.common.Status.FAILURE
         else:
