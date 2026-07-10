@@ -2,6 +2,7 @@ import py_trees
 
 from behaviours.BallChaseBehaviour import BallChaseBehaviour
 from behaviours.CameraBehaviour import CameraBehaviour
+from behaviours.OutOfBoundsBehaviour import OutOfBoundsBehaviour
 from behaviours.StopGoBehaviour import StopGoBehaviour
 
 
@@ -17,18 +18,27 @@ def create_root():
     This is kept in its own method so it can be used to generate diagrams with py-trees-render
     """
 
-    root = py_trees.composites.Selector(name="RoboCup Controller", memory=False)
-    parallel = py_trees.composites.Parallel(
-        name="Parallel", policy=py_trees.common.ParallelPolicy.SuccessOnAll()
+    parallel_root = py_trees.composites.Parallel(
+        name="RoboCup Controller",
+        policy=py_trees.common.ParallelPolicy.SuccessOnAll(),
     )
 
+    # camera always runs
+    camera = CameraBehaviour("Camera")
+    selector = py_trees.composites.Selector(
+        name="Movement", memory=False
+    )  # selector for different movement operations
+    parallel_root.add_children([camera, selector])
+
+    # P1: stop/go controls
     stop_go = StopGoBehaviour("Stop/Go")
 
-    camera = CameraBehaviour("Camera")
+    # P2: avoid out of bounds
+    out_of_bounds = OutOfBoundsBehaviour("Avoid Out of Bounds")
+
+    # P3: chase the ball
     ball_chase = BallChaseBehaviour("Ball Chase")
 
-    parallel.add_children([camera, ball_chase])
+    selector.add_children([stop_go, out_of_bounds, ball_chase])
 
-    root.add_children([stop_go, parallel])
-
-    return root
+    return parallel_root
