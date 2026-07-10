@@ -341,21 +341,15 @@ async fn main(spawner: Spawner) {
         }
     };
 
-    let left_ir = Input::new(p.PIN_10, Pull::None);
-    let back_ir = Input::new(p.PIN_15, Pull::None);
-    let right_ir = Input::new(p.PIN_18, Pull::None);
+    let left_ir = Input::new(p.PIN_10, Pull::Down);
+    let back_ir = Input::new(p.PIN_15, Pull::Down);
+    let right_ir = Input::new(p.PIN_18, Pull::Down);
 
     let command_fut = async {
         loop {
             class.wait_connection().await;
             log::info!("Connected");
-            let _ = handle_commands(
-                &mut class,
-                (left_ir.get_level() as u8)
-                    | ((back_ir.get_level() as u8) << 1)
-                    | ((right_ir.get_level() as u8) << 2),
-            )
-            .await;
+            let _ = handle_commands(&mut class, &left_ir, &back_ir, &right_ir).await;
             log::info!("Disconnected");
         }
     };
@@ -376,7 +370,9 @@ impl From<EndpointError> for Disconnected {
 
 async fn handle_commands<'d, T: Instance + 'd>(
     class: &mut CdcAcmClass<'d, Driver<'d, T>>,
-    ir_info: u8,
+    left_ir: &Input<'d>,
+    back_ir: &Input<'d>,
+    right_ir: &Input<'d>,
 ) -> Result<(), Disconnected> {
     let mut buf = [0; 64];
     let mut dest = [0; 1024];
@@ -427,7 +423,11 @@ async fn handle_commands<'d, T: Instance + 'd>(
                                 odoms[i / 4].to_be_bytes()[i % 4]
                             }))
                             .and_then(|_| encoder.push(&tof_reading.to_be_bytes()))
-                            .and_then(|_| encoder.push(&[ir_info]))
+                            .and_then(|_| {
+                                encoder.push(&[(left_ir.is_low() as u8)
+                                    | ((back_ir.is_low() as u8) << 1)
+                                    | ((right_ir.is_low() as u8) << 2)])
+                            })
                         else {
                             warn!("Error encoding data!");
                             continue 'outer;
