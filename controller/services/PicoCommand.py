@@ -58,10 +58,26 @@ class PicoCommand(SupportsCommand):
 
             if response:
                 return (
-                    int.from_bytes(response[:4], "big", signed=True),
-                    int.from_bytes(response[4:8], "big", signed=True),
-                    int.from_bytes(response[8:12], "big", signed=True),
-                    int.from_bytes(response[12:14], "big", signed=False),
+                    # odom x
+                    int.from_bytes(b, "big", signed=True)
+                    if len(b := response[:4]) == 4
+                    else None,
+                    # odom y
+                    int.from_bytes(b, "big", signed=True)
+                    if len(b := response[4:8]) == 4
+                    else None,
+                    # odom w
+                    int.from_bytes(b, "big", signed=True)
+                    if len(b := response[8:12]) == 4
+                    else None,
+                    # tof
+                    int.from_bytes(b, "big", signed=False)
+                    if len(b := response[12:14]) == 2
+                    else None,
+                    # line sensors
+                    int.from_bytes(b, "big", signed=False)
+                    if len(b := response[14:15]) == 1
+                    else None,
                 )
             print("No response received, retrying...")
 
@@ -77,11 +93,22 @@ class PicoCommand(SupportsCommand):
         dribbler -- -1 to 1 (+ve is attractive)
         """
         self.command = (int(vx), int(vy), int(math.degrees(vw)), -int(dribbler * 100))
-        self.res = self.send_packet(self.command)
+        self.res = [
+            new if new is not None else old
+            for old, new in zip(self.res, self.send_packet(self.command))
+        ]
+
         rr.log("/pico/command/vx", rr.Scalars(vx))
         rr.log("/pico/command/vy", rr.Scalars(vy))
         rr.log("/pico/command/vw", rr.Scalars(vw))
         rr.log("/pico/command/dribbler", rr.Scalars(dribbler))
+
+        if tof := self.res[3]:
+            rr.log("/pico/tof", rr.Scalars(tof))
+        else:
+            rr.log("/pico/tof", rr.Clear(recursive=True))
+
+        rr.log("/pico/line_status", rr.Scalars(self.res[4] or 0))
 
     def get_odometry(self) -> tuple[float, float, float]:
         """Returns the current odometry of the robot.
@@ -104,10 +131,29 @@ class PicoCommand(SupportsCommand):
         """
         Returns the TOF from ball sensor as integer or None if not available
         """
-        tof = None if self.res[3] == 0 else self.res[3]
-        if tof:
-            rr.log("/pico/tof", rr.Scalars(tof))
-        else:
-            rr.log("/pico/tof", rr.Clear(recursive=True))
+        return None if self.res[3] == 0 else self.res[3]
 
-        return tof
+    def get_line_status(self) -> int:
+        r"""
+        Returns the line status from the IR line sensors. Represented as a 3-bit
+        integer (with LSB being bit 0):
+            - bit 0: left_ir
+            - bit 1: back_ir
+            - bit 2: right_ir
+
+        A 1 bit represent line detected, while a 0 bit means no line detected.
+        Having the bits packed this way allows for easy matching of the 8
+        possible line detection cases (6 different line orientations, 1 for no
+        line, and 1 for invalid).
+
+        ```
+        FRONT OF THE ROBOT
+           1----5----4
+            \       /
+             3     6
+              \   /
+                2
+        ```
+        Combinations of two sensors give a virtual sensor at the midpoint as shown.
+        """
+        return self.res[4] or 0

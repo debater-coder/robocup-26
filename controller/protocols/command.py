@@ -46,3 +46,29 @@ class SupportsCommand(Protocol):
         Returns the TOF from ball sensor as integer or None if not available
         """
         raise NotImplementedError
+
+    @abstractmethod
+    def get_line_status(self) -> int:
+        r"""
+        Returns the line status from the IR line sensors. Represented as a 3-bit
+        integer (with LSB being bit 0):
+            - bit 0: left_ir
+            - bit 1: back_ir
+            - bit 2: right_ir
+
+        A 1 bit represent line detected, while a 0 bit means no line detected.
+        Having the bits packed this way allows for easy matching of the 8
+        possible line detection cases (6 different line orientations, 1 for no
+        line, and 1 for invalid).
+
+        ```
+        FRONT OF THE ROBOT
+           1----5----4
+            \       /
+             3     6
+              \   /
+                2
+        ```
+        Combinations of two sensors give a virtual sensor at the midpoint as shown.
+        """
+        raise NotImplementedError
