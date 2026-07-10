@@ -5,7 +5,6 @@ Calibration script modified from: https://docs.opencv.org/4.11.0/dc/dbb/tutorial
 import json
 import os
 from multiprocessing.shared_memory import SharedMemory
-from pathlib import Path
 from time import sleep
 
 import cv2 as cv
