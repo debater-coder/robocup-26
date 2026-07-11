@@ -11,12 +11,37 @@ class CommandFailedError(Exception):
     pass
 
 
+class DebounceFilter:
+    def __init__(
+        self,
+        debounce_ticks=3,
+    ):
+        self.debounce_ticks = debounce_ticks
+        self.last_x = 0
+        self.seen_for = 0
+
+    def tick(self, x: int) -> int:
+        if x == 0:
+            self.seen_for = 0
+            return 0
+        if self.last_x == x:
+            self.seen_for += 1
+            if self.seen_for > self.debounce_ticks:
+                return x
+            return 0
+
+        self.last_x = x
+        self.seen_for = 0
+        return 0
+
+
 class PicoCommand(SupportsCommand):
     def __init__(self):
         self.ser = serial.Serial("/dev/ttyACM0", timeout=0.02, write_timeout=0.02)
         self.command = (0, 0, 0, 0)
 
         self.res = [0, 0, 0, 0, 0]
+        self.line_status_debounce = DebounceFilter()
 
     def read_cobs_packet(self):
         buf = bytearray()
@@ -156,4 +181,4 @@ class PicoCommand(SupportsCommand):
         ```
         Combinations of two sensors give a virtual sensor at the midpoint as shown.
         """
-        return self.res[4] or 0
+        return self.line_status_debounce.tick(self.res[4] or 0)
