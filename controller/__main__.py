@@ -52,7 +52,7 @@ tree.setup(command=PicoCommand())
 print("setup done")
 
 tree.tick_tock(
-    period_ms=50,
+    period_ms=25,
     post_tick_handler=post_tick,
     number_of_iterations=py_trees.trees.CONTINUOUS_TICK_TOCK,
 )

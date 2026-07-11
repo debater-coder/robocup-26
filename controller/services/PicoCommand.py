@@ -11,27 +11,21 @@ class CommandFailedError(Exception):
     pass
 
 
-class DebounceFilter:
+class LineStatusDebounce:
     def __init__(
         self,
         debounce_ticks=3,
     ):
         self.debounce_ticks = debounce_ticks
-        self.last_x = 0
         self.seen_for = 0
 
     def tick(self, x: int) -> int:
         if x == 0:
             self.seen_for = 0
             return 0
-        if self.last_x == x:
-            self.seen_for += 1
-            if self.seen_for > self.debounce_ticks:
-                return x
-            return 0
-
-        self.last_x = x
-        self.seen_for = 0
+        self.seen_for += 1
+        if self.seen_for > self.debounce_ticks:
+            return x
         return 0
 
 
@@ -41,7 +35,7 @@ class PicoCommand(SupportsCommand):
         self.command = (0, 0, 0, 0)
 
         self.res = [0, 0, 0, 0, 0]
-        self.line_status_debounce = DebounceFilter()
+        self.line_status_debounce = LineStatusDebounce()
 
     def read_cobs_packet(self):
         buf = bytearray()
