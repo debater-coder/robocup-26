@@ -17,4 +17,4 @@ class StopGoBehaviour(py_trees.behaviour.Behaviour):
             return py_trees.common.Status.FAILURE
         else:
             self.feedback_message = "STOP"
-            return py_trees.common.Status.SUCCESS
+            return py_trees.common.Status.RUNNING

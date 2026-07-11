@@ -49,4 +49,5 @@ class OutOfBoundsBehaviour(py_trees.behaviour.Behaviour):
 
         if line_status != 0:
             self.feedback_message = "Invalid line sensor state"
+        self.feedback_message = "No line detected"
         return py_trees.common.Status.FAILURE
