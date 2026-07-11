@@ -32,4 +32,4 @@ class GoForwardsBehaviour(py_trees.behaviour.Behaviour):
     def update(self):
         self.command.send_command(200, 0, 0, 1)
         self.feedback_message = "forwards"
-        return py_trees.common.Status.SUCCESS
+        return py_trees.common.Status.RUNNING
