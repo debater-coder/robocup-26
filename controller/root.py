@@ -2,6 +2,7 @@ import py_trees
 
 from behaviours.BallChaseBehaviour import BallChaseBehaviour
 from behaviours.CameraBehaviour import CameraBehaviour
+from behaviours.GoForwardsBehaviour import GoForwardsBehaviour
 from behaviours.OutOfBoundsBehaviour import OutOfBoundsBehaviour
 from behaviours.StopGoBehaviour import StopGoBehaviour
 
@@ -37,8 +38,9 @@ def create_root():
     out_of_bounds = OutOfBoundsBehaviour("Avoid Out of Bounds")
 
     # P3: chase the ball
-    ball_chase = BallChaseBehaviour("Ball Chase")
+    # ball_chase = BallChaseBehaviour("Ball Chase")
+    forwards = GoForwardsBehaviour("Forwards")
 
-    selector.add_children([stop_go, out_of_bounds, ball_chase])
+    selector.add_children([stop_go, out_of_bounds, forwards])
 
     return parallel_root
