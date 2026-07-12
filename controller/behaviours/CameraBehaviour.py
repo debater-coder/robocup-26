@@ -9,7 +9,13 @@ import rerun as rr
 from cv2.typing import MatLike
 
 ORANGE_LOWER = np.array([0, 160, 120])
-ORANGE_UPPER = np.array([20, 255, 255])
+ORANGE_UPPER = np.array([15, 255, 255])
+
+YELLOW_LOWER = np.array([20, 160, 120])
+YELLOW_UPPER = np.array([35, 255, 255])
+
+CYAN_LOWER = np.array([85, 160, 120])
+CYAN_UPPER = np.array([100, 255, 255])
 
 
 class CameraBehaviour(py_trees.behaviour.Behaviour):
@@ -18,9 +24,13 @@ class CameraBehaviour(py_trees.behaviour.Behaviour):
 
         self.blackboard = self.attach_blackboard_client(name="Camera Behaviour")
 
-        self.blackboard.register_key("ball_centre", access=py_trees.common.Access.WRITE)
-
-        self.blackboard.register_key("ball_radius", access=py_trees.common.Access.WRITE)
+        self.blackboard.register_key(
+            "/ball/centre", access=py_trees.common.Access.WRITE
+        )
+        self.blackboard.register_key(
+            "/ball/radius", access=py_trees.common.Access.WRITE
+        )
+        self.blackboard.register_key("/goal/bb", access=py_trees.common.Access.WRITE)
 
     def setup(self, **kwargs):
         print("setup")
@@ -40,11 +50,12 @@ class CameraBehaviour(py_trees.behaviour.Behaviour):
     def update(self):
         frame = self.frame_buffer[:, :, :3]
         rr.log("/camera/image", rr.Image(frame).compress())
-
         blurred = cv2.GaussianBlur(frame, (11, 11), 0)
         hsv = cv2.cvtColor(blurred, cv2.COLOR_RGB2HSV)
+
+        # Ball
         mask = cv2.inRange(hsv, ORANGE_LOWER, ORANGE_UPPER)
-        rr.log("/camera/mask", rr.Image(mask).compress())
+        rr.log("/camera/ball/mask", rr.Image(mask).compress())
         mask = cv2.erode(mask, typing.cast(MatLike, None), iterations=2)
         mask = cv2.dilate(mask, typing.cast(MatLike, None), iterations=2)
         contours = cv2.findContours(
@@ -55,17 +66,40 @@ class CameraBehaviour(py_trees.behaviour.Behaviour):
             contour = max(contours, key=cv2.contourArea)
             ((x, y), radius) = cv2.minEnclosingCircle(contour)
             rr.log(
-                "/camera/ball_circle",
+                "/camera/ball/circle",
                 rr.Ellipses2D(half_sizes=[(radius, radius)], centers=[(x, y)]),
             )
 
-            self.blackboard.ball_centre = (x, y)
-            self.blackboard.ball_radius = radius
+            self.blackboard.ball.centre = (x, y)
+            self.blackboard.ball.radius = radius
 
         else:
-            rr.log("/camera/ball_circle", rr.Clear(recursive=True))
-            self.blackboard.ball_centre = None
-            self.blackboard.ball_radius = None
+            rr.log("/camera/ball/circle", rr.Clear(recursive=True))
+            self.blackboard.ball.centre = None
+            self.blackboard.ball.radius = None
+
+        # Goal
+        mask = cv2.inRange(hsv, YELLOW_LOWER, YELLOW_UPPER)
+        rr.log("/camera/goal/mask", rr.Image(mask).compress())
+        mask = cv2.erode(mask, typing.cast(MatLike, None), iterations=2)
+        mask = cv2.dilate(mask, typing.cast(MatLike, None), iterations=2)
+        contours = cv2.findContours(
+            mask.copy(), cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_SIMPLE
+        )[0]
+        if len(contours) > 0:
+            contour = max(contours, key=cv2.contourArea)
+            x, y, w, h = cv2.boundingRect(contour)
+            rr.log(
+                "/camera/goal/bb",
+                rr.Boxes2D(mins=[(x, y)], sizes=[(w, h)]),
+            )
+
+            self.blackboard.goal.bb = (x, y, w, h)
+
+        else:
+            rr.log("/camera/goal/bb", rr.Clear(recursive=True))
+
+            self.blackboard.goal.bb = None
 
         return py_trees.common.Status.RUNNING
 

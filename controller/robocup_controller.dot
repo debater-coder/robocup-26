@@ -12,17 +12,30 @@ Movement [label=Movement, shape=octagon, style=filled, fillcolor=cyan, fontsize=
 Movement -> "Stop/Go";
 "Avoid Out of Bounds" [label="Avoid Out of Bounds", shape=ellipse, style=filled, fillcolor=gray, fontsize=9, fontcolor=black];
 Movement -> "Avoid Out of Bounds";
+"Score Goal" [label="Score Goal", shape=box, style=filled, fillcolor=orange, fontsize=9, fontcolor=black];
+Movement -> "Score Goal";
+"Has Posession?" [label="Has Posession?", shape=ellipse, style=filled, fillcolor=gray, fontsize=9, fontcolor=black];
+"Score Goal" -> "Has Posession?";
+"Get Goal Target" [label="Get Goal Target", shape=ellipse, style=filled, fillcolor=gray, fontsize=9, fontcolor=black];
+"Score Goal" -> "Get Goal Target";
+"Goal Chase" [label="Goal Chase", shape=ellipse, style=filled, fillcolor=gray, fontsize=9, fontcolor=black];
+"Score Goal" -> "Goal Chase";
 "Ball Chase" [label="Ball Chase", shape=ellipse, style=filled, fillcolor=gray, fontsize=9, fontcolor=black];
 Movement -> "Ball Chase";
-"/ball_centre" -> "Ball Chase" [color=green, constraint=false, weight=0];
-Camera -> "/ball_centre" [color=blue, constraint=false, weight=0];
-"/ball_radius" -> "Ball Chase" [color=green, constraint=false, weight=0];
-Camera -> "/ball_radius" [color=blue, constraint=false, weight=0];
+"/goal/bb" -> "Get Goal Target" [color=green, constraint=false, weight=0];
+Camera -> "/goal/bb" [color=blue, constraint=false, weight=0];
+"/ball/centre" -> "Ball Chase" [color=green, constraint=false, weight=0];
+Camera -> "/ball/centre" [color=blue, constraint=false, weight=0];
+"/goal/target" -> "Goal Chase" [color=green, constraint=false, weight=0];
+"Get Goal Target" -> "/goal/target" [color=blue, constraint=false, weight=0];
+Camera -> "/ball/radius" [color=blue, constraint=false, weight=0];
 subgraph Blackboard {
 id=Blackboard;
 label=Blackboard;
 rank=sink;
-"/ball_centre" [label="/ball_centre: -", shape=box, style=filled, color=blue, fillcolor=white, fontsize=8, fontcolor=blue, width=0, height=0, fixedsize=false];
-"/ball_radius" [label="/ball_radius: -", shape=box, style=filled, color=blue, fillcolor=white, fontsize=8, fontcolor=blue, width=0, height=0, fixedsize=false];
+"/goal/bb" [label="/goal/bb: -", shape=box, style=filled, color=blue, fillcolor=white, fontsize=8, fontcolor=blue, width=0, height=0, fixedsize=false];
+"/ball/centre" [label="/ball/centre: -", shape=box, style=filled, color=blue, fillcolor=white, fontsize=8, fontcolor=blue, width=0, height=0, fixedsize=false];
+"/goal/target" [label="/goal/target: -", shape=box, style=filled, color=blue, fillcolor=white, fontsize=8, fontcolor=blue, width=0, height=0, fixedsize=false];
+"/ball/radius" [label="/ball/radius: -", shape=box, style=filled, color=blue, fillcolor=white, fontsize=8, fontcolor=blue, width=0, height=0, fixedsize=false];
 }
 }

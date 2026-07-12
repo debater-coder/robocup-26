@@ -1,8 +1,9 @@
 import py_trees
 
-from behaviours.BallChaseBehaviour import BallChaseBehaviour
 from behaviours.CameraBehaviour import CameraBehaviour
-from behaviours.GoForwardsBehaviour import GoForwardsBehaviour
+from behaviours.ChaseBehaviour import ChaseBehaviour
+from behaviours.GetGoalTargetBehaviour import GetGoalTargetBehaviour
+from behaviours.HasPossessionBehaviour import HasPossessionBehaviour
 from behaviours.OutOfBoundsBehaviour import OutOfBoundsBehaviour
 from behaviours.StopGoBehaviour import StopGoBehaviour
 
@@ -19,17 +20,8 @@ def create_root():
     This is kept in its own method so it can be used to generate diagrams with py-trees-render
     """
 
-    parallel_root = py_trees.composites.Parallel(
-        name="RoboCup Controller",
-        policy=py_trees.common.ParallelPolicy.SuccessOnAll(),
-    )
-
-    # camera always runs
+    # Data gathering
     camera = CameraBehaviour("Camera")
-    selector = py_trees.composites.Selector(
-        name="Movement", memory=False
-    )  # selector for different movement operations
-    parallel_root.add_children([camera, selector])
 
     # P1: stop/go controls
     stop_go = StopGoBehaviour("Stop/Go")
@@ -37,10 +29,28 @@ def create_root():
     # P2: avoid out of bounds
     out_of_bounds = OutOfBoundsBehaviour("Avoid Out of Bounds")
 
-    # P3: chase the ball
-    # ball_chase = BallChaseBehaviour("Ball Chase")
-    forwards = GoForwardsBehaviour("Forwards")
+    # P3: try to score a goal
+    has_possession = HasPossessionBehaviour("Has Posession?")
+    get_target = GetGoalTargetBehaviour("Get Goal Target")
+    goal_chase = ChaseBehaviour("Goal Chase", remap_to={"/target": "/goal/target"})
+    score_goal = py_trees.composites.Sequence(
+        "Score Goal", memory=False, children=[has_possession, get_target, goal_chase]
+    )
 
-    selector.add_children([stop_go, out_of_bounds, forwards])
+    # P4: chase the ball
+    ball_chase = ChaseBehaviour("Ball Chase", remap_to={"/target": "/ball/centre"})
 
+    # Movement selector
+    movement = py_trees.composites.Selector(
+        name="Movement",
+        memory=False,
+        children=[stop_go, out_of_bounds, score_goal, ball_chase],
+    )
+
+    # Root
+    parallel_root = py_trees.composites.Parallel(
+        name="RoboCup Controller",
+        policy=py_trees.common.ParallelPolicy.SuccessOnAll(),
+        children=[camera, movement],
+    )
     return parallel_root
