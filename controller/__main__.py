@@ -1,5 +1,6 @@
 import argparse
 import sys
+from datetime import datetime
 
 import py_trees
 import rerun as rr
@@ -23,6 +24,13 @@ parser.add_argument(
     "-i", "--recording-id", help="Rerun recording ID (keep same for combined recording)"
 )
 
+parser.add_argument(
+    "-S",
+    "--stream",
+    action="store_true",
+    help="Stream to grpc server (instead of storing in recordings folder)",
+)
+
 args = parser.parse_args()
 
 root = create_root()
@@ -32,7 +40,11 @@ if args.render:
     sys.exit()
 
 rr.init("controller")
-rr.connect_grpc()
+if args.stream:
+    rr.connect_grpc()
+else:
+    timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
+    rr.save(f"recordings/{timestamp}.rrd")
 
 
 def post_tick(tree):
