@@ -4,7 +4,7 @@ Description=RoboCup camera streamer service
 [Service]
 User=robocup
 WorkingDirectory=/home/robocup/robocup/robocup-26/controller
-ExecStart=/nix/var/nix/profiles/default/bin/nix --extra-experimental-features "nix-command flakes" develop -- profile /home/robocup/robocup/robocup-26/controller/develop-profile -c "uv run ."
+ExecStart=/nix/var/nix/profiles/default/bin/nix --extra-experimental-features "nix-command flakes" develop --profile /home/robocup/robocup/robocup-26/controller/develop-profile -c "uv run ."
 
 [Install]
 WantedBy=multi-user.target
