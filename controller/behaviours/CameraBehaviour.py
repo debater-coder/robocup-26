@@ -11,7 +11,7 @@ from cv2.typing import MatLike
 ORANGE_LOWER = np.array([0, 160, 120])
 ORANGE_UPPER = np.array([15, 255, 255])
 
-YELLOW_LOWER = np.array([20, 160, 120])
+YELLOW_LOWER = np.array([20, 160, 80])
 YELLOW_UPPER = np.array([35, 255, 255])
 
 CYAN_LOWER = np.array([85, 160, 120])
