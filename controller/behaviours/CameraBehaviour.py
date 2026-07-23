@@ -15,8 +15,8 @@ ORANGE_UPPER = np.array([15, 255, 255])
 YELLOW_LOWER = np.array([20, 100, 120])
 YELLOW_UPPER = np.array([35, 255, 255])
 
-CYAN_LOWER = np.array([85, 160, 120])
-CYAN_UPPER = np.array([100, 255, 255])
+CYAN_LOWER = np.array([85, 50, 50])
+CYAN_UPPER = np.array([130, 255, 255])
 
 
 class CameraBehaviour(py_trees.behaviour.Behaviour):
