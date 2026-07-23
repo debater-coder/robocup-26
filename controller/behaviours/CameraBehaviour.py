@@ -7,6 +7,7 @@ import numpy as np
 import py_trees
 import rerun as rr
 from cv2.typing import MatLike
+from gpiozero import LED, Button
 
 ORANGE_LOWER = np.array([0, 160, 120])
 ORANGE_UPPER = np.array([15, 255, 255])
@@ -32,6 +33,8 @@ class CameraBehaviour(py_trees.behaviour.Behaviour):
         )
         self.blackboard.register_key("/goal/bb", access=py_trees.common.Access.WRITE)
 
+        self.go_to_cyan = False
+
     def setup(self, **kwargs):
         print("setup")
         # Frame Shape
@@ -44,10 +47,24 @@ class CameraBehaviour(py_trees.behaviour.Behaviour):
         self.frame_buffer = np.ndarray(
             self.frame_shape, buffer=self.frame_buffer_shm.buf, dtype="u1"
         )
+        self.button = Button(19)
+        self.led = LED(13)
+
+        def button_handler():
+            self.go_to_cyan = not self.go_to_cyan
+            if self.go_to_cyan:
+                self.led.on()
+            else:
+                self.led.off()
+
+        self.button.when_activated = button_handler
 
     def initialise(self): ...
 
     def update(self):
+        goal_lower = CYAN_LOWER if self.go_to_cyan else YELLOW_LOWER
+        goal_upper = CYAN_UPPER if self.go_to_cyan else YELLOW_UPPER
+
         frame = self.frame_buffer[:, :, :3]
         rr.log("/camera/image", rr.Image(frame).compress())
         blurred = cv2.GaussianBlur(frame, (11, 11), 0)
@@ -79,7 +96,7 @@ class CameraBehaviour(py_trees.behaviour.Behaviour):
             self.blackboard.ball.radius = None
 
         # Goal
-        mask = cv2.inRange(hsv, YELLOW_LOWER, YELLOW_UPPER)
+        mask = cv2.inRange(hsv, goal_lower, goal_upper)
         rr.log("/camera/goal/mask", rr.Image(mask).compress())
         mask = cv2.erode(mask, typing.cast(MatLike, None), iterations=2)
         mask = cv2.dilate(mask, typing.cast(MatLike, None), iterations=2)
