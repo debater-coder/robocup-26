@@ -54,8 +54,10 @@ class CameraBehaviour(py_trees.behaviour.Behaviour):
             self.go_to_cyan = not self.go_to_cyan
             if self.go_to_cyan:
                 self.led.on()
+                self.feedback_message = "scoring cyan"
             else:
                 self.led.off()
+                self.feedback_message = "scoring yellow"
 
         self.button.when_activated = button_handler
 
