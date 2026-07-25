@@ -4,8 +4,37 @@ from behaviours.CameraBehaviour import CameraBehaviour
 from behaviours.ChaseBehaviour import ChaseBehaviour
 from behaviours.GetGoalTargetBehaviour import GetGoalTargetBehaviour
 from behaviours.HasPossessionBehaviour import HasPossessionBehaviour
+from behaviours.IsGoalCloseBehaviour import IsGoalCloseBehaviour
+from behaviours.KickBallBehaviour import KickBallBehaviour
 from behaviours.OutOfBoundsBehaviour import OutOfBoundsBehaviour
 from behaviours.StopGoBehaviour import StopGoBehaviour
+
+
+def create_attempt_goal_root():
+    has_possession = HasPossessionBehaviour("Has Posession?")
+
+    # P1: Scoring a goal
+    goal_close = IsGoalCloseBehaviour("Goal Close?")
+    kick_ball = IsGoalCloseBehaviour("Kick Ball")
+    score_goal = py_trees.composites.Sequence(
+        "Score Goal", memory=False, children=[goal_close, kick_ball]
+    )
+
+    # P2: Going to the goal
+    get_target = GetGoalTargetBehaviour("Get Goal Target")
+    goal_chase = ChaseBehaviour("Goal Chase", remap_to={"/target": "/goal/target"})
+    go_to_goal = py_trees.composites.Sequence(
+        "Go to Goal", memory=False, children=[get_target, goal_chase]
+    )
+
+    goal_selector = py_trees.composites.Selector(
+        "Goal Selector", memory=False, children=[score_goal, go_to_goal]
+    )
+
+    attempt_goal = py_trees.composites.Sequence(
+        "Attempt Goal", memory=False, children=[has_possession, goal_selector]
+    )
+    return attempt_goal
 
 
 def create_root():
@@ -29,13 +58,8 @@ def create_root():
     # P2: avoid out of bounds
     out_of_bounds = OutOfBoundsBehaviour("Avoid Out of Bounds")
 
-    # P3: try to score a goal
-    has_possession = HasPossessionBehaviour("Has Posession?")
-    get_target = GetGoalTargetBehaviour("Get Goal Target")
-    goal_chase = ChaseBehaviour("Goal Chase", remap_to={"/target": "/goal/target"})
-    score_goal = py_trees.composites.Sequence(
-        "Score Goal", memory=False, children=[has_possession, get_target, goal_chase]
-    )
+    # P3: attempt goal
+    attempt_goal = create_attempt_goal_root()
 
     # P4: chase the ball
     ball_chase = ChaseBehaviour("Ball Chase", remap_to={"/target": "/ball/centre"})
@@ -44,7 +68,7 @@ def create_root():
     movement = py_trees.composites.Selector(
         name="Movement",
         memory=False,
-        children=[stop_go, out_of_bounds, score_goal, ball_chase],
+        children=[stop_go, out_of_bounds, attempt_goal, ball_chase],
     )
 
     # Root
