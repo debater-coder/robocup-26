@@ -28,10 +28,10 @@ class ChaseBehaviour(py_trees.behaviour.Behaviour):
 
     def update(self):
         if centre := self.blackboard.target:
-            if centre[0] > 612:
+            if centre[0] > 875:
                 self.command.send_command(200, 0, 4, 1)
                 self.feedback_message = "turning right"
-            elif centre[0] < 412:
+            elif centre[0] < 725:
                 self.command.send_command(200, 0, -4, 1)
                 self.feedback_message = "turning left"
             else:
