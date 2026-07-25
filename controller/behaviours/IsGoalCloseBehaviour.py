@@ -18,7 +18,7 @@ class IsGoalCloseBehaviour(py_trees.behaviour.Behaviour):
             x, y, w, h = self.blackboard.goal.bb
             return (
                 py_trees.common.Status.SUCCESS
-                if w > 700 and h > 500
+                if w > 700 and h > 350
                 else py_trees.common.Status.FAILURE
             )
 
