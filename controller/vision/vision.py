@@ -26,17 +26,22 @@ class VisionInfo:
     goal_bb: tuple[float, float, float, float] | None
 
 
-def process_frame(frame: MatLike, go_to_cyan: bool):
+def log_image(path: str, frame: MatLike, idx):
+    if idx % 5 == 0:
+        rr.log(path, rr.Image(cv2.resize(frame, (320, 240))).compress(jpeg_quality=50))
+
+
+def process_frame(frame: MatLike, go_to_cyan: bool, frame_idx=0):
     goal_lower = CYAN_LOWER if go_to_cyan else YELLOW_LOWER
     goal_upper = CYAN_UPPER if go_to_cyan else YELLOW_UPPER
 
-    rr.log("/camera/image", rr.Image(frame).compress())
+    log_image("/camera/image", frame, frame_idx)
     blurred = cv2.GaussianBlur(frame, (11, 11), 0)
     hsv = cv2.cvtColor(blurred, cv2.COLOR_RGB2HSV)
 
     # Ball
     mask = cv2.inRange(hsv, ORANGE_LOWER, ORANGE_UPPER)
-    rr.log("/camera/ball/mask", rr.Image(mask).compress())
+    log_image("/camera/ball/mask", mask, frame_idx)
     mask = cv2.erode(mask, typing.cast(MatLike, None), iterations=2)
     mask = cv2.dilate(mask, typing.cast(MatLike, None), iterations=2)
     contours = cv2.findContours(
@@ -45,7 +50,7 @@ def process_frame(frame: MatLike, go_to_cyan: bool):
 
     # White lines
     mask = cv2.inRange(hsv, WHITE_LOWER, WHITE_UPPER)
-    rr.log("/camera/lines/mask", rr.Image(mask).compress())
+    log_image("/camera/lines/mask", mask, frame_idx)
 
     if len(contours) > 0:
         contour = max(contours, key=cv2.contourArea)
@@ -65,7 +70,7 @@ def process_frame(frame: MatLike, go_to_cyan: bool):
 
     # Goal
     mask = cv2.inRange(hsv, goal_lower, goal_upper)
-    rr.log("/camera/goal/mask", rr.Image(mask).compress())
+    log_image("/camera/goal/mask", mask, frame_idx)
     mask = cv2.erode(mask, typing.cast(MatLike, None), iterations=2)
     mask = cv2.dilate(mask, typing.cast(MatLike, None), iterations=2)
     contours = cv2.findContours(
