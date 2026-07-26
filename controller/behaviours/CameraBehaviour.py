@@ -25,6 +25,9 @@ class CameraBehaviour(py_trees.behaviour.Behaviour):
             "/ball/radius", access=py_trees.common.Access.WRITE
         )
         self.blackboard.register_key("/goal/bb", access=py_trees.common.Access.WRITE)
+        self.blackboard.register_key(
+            "/camera/shape", access=py_trees.common.Access.WRITE
+        )
 
         self.go_to_cyan = False
 
@@ -33,6 +36,8 @@ class CameraBehaviour(py_trees.behaviour.Behaviour):
         # Frame Shape
         self.frame_shape_shm = SharedMemory(name="frame_shape", track=False)
         self.frame_shape = np.ndarray([3], buffer=self.frame_shape_shm.buf, dtype="i4")
+
+        self.blackboard.camera.shape = (self.frame_shape[1], self.frame_shape[0])
 
         # Framebuffer
         self.frame_buffer_shm = SharedMemory(name="frame_buffer", track=False)

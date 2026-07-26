@@ -22,4 +22,4 @@ class KickBallBehaviour(py_trees.behaviour.Behaviour):
     def update(self):
         self.command.send_command(0, 0, 0, -1)
 
-        return py_trees.common.Status.SUCCESS
+        return py_trees.common.Status.RUNNING

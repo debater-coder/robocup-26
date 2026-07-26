@@ -6,7 +6,14 @@ from protocols.command import SupportsCommand
 
 
 class ChaseBehaviour(py_trees.behaviour.Behaviour):
-    def __init__(self, name: str, remap_to: dict[str, str] = {"/target": "/target"}):
+    def __init__(
+        self,
+        name: str,
+        remap_to: dict[str, str] = {
+            "/target": "/target",
+            "/camera/shape": "/camera/shape",
+        },
+    ):
         super().__init__(name)
 
         self.blackboard = self.attach_blackboard_client(name=name)
@@ -18,6 +25,13 @@ class ChaseBehaviour(py_trees.behaviour.Behaviour):
             remap_to=remap_to["/target"],
         )
 
+        self.blackboard.register_key(
+            "/camera/shape",
+            access=py_trees.common.Access.READ,
+            required=True,
+            remap_to=remap_to["/camera/shape"],
+        )
+
     def setup(self, **kwargs: typing.Any) -> None:
         if "command" in kwargs and isinstance(
             command := kwargs["command"], SupportsCommand
@@ -27,11 +41,12 @@ class ChaseBehaviour(py_trees.behaviour.Behaviour):
             raise TypeError("Expected command to be passed in ChaseBehaviour.setup()")
 
     def update(self):
+        w, h = self.blackboard.camera.shape
         if centre := self.blackboard.target:
-            if centre[0] > 450:
+            if centre[0] > w * 0.6:
                 self.command.send_command(200, 0, 4, 1)
                 self.feedback_message = "turning right"
-            elif centre[0] < 350:
+            elif centre[0] < w * 0.4:
                 self.command.send_command(200, 0, -4, 1)
                 self.feedback_message = "turning left"
             else:
