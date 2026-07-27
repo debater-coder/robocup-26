@@ -28,7 +28,7 @@ class VisionInfo:
 
 def log_image(path: str, frame: MatLike, idx):
     if idx % 5 == 0:
-        rr.log(path, rr.Image(cv2.resize(frame, (320, 240))).compress(jpeg_quality=50))
+        rr.log(path, rr.Image(frame).compress(jpeg_quality=50))
 
 
 def process_frame(frame: MatLike, go_to_cyan: bool, frame_idx=0):
