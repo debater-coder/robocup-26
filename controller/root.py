@@ -1,13 +1,15 @@
 import py_trees
 
-from behaviours.CameraBehaviour import CameraBehaviour
-from behaviours.ChaseBehaviour import ChaseBehaviour
-from behaviours.GetGoalTargetBehaviour import GetGoalTargetBehaviour
-from behaviours.HasPossessionBehaviour import HasPossessionBehaviour
-from behaviours.IsGoalCloseBehaviour import IsGoalCloseBehaviour
-from behaviours.KickBallBehaviour import KickBallBehaviour
-from behaviours.OutOfBoundsBehaviour import OutOfBoundsBehaviour
-from behaviours.StopGoBehaviour import StopGoBehaviour
+from .behaviours import (
+    CameraBehaviour,
+    ChaseBehaviour,
+    GetGoalTargetBehaviour,
+    HasPossessionBehaviour,
+    IsGoalCloseBehaviour,
+    KickBallBehaviour,
+    OutOfBoundsBehaviour,
+    StopGoBehaviour,
+)
 
 
 def create_attempt_goal_root():
