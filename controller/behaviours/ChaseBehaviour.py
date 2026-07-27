@@ -22,14 +22,14 @@ class ChaseBehaviour(py_trees.behaviour.Behaviour):
             "/target",
             access=py_trees.common.Access.READ,
             required=True,
-            remap_to=remap_to["/target"],
+            remap_to=remap_to.get("/target"),
         )
 
         self.blackboard.register_key(
             "/camera/shape",
             access=py_trees.common.Access.READ,
             required=True,
-            remap_to=remap_to["/camera/shape"],
+            remap_to=remap_to.get("/camera/shape"),
         )
 
     def setup(self, **kwargs: typing.Any) -> None:
