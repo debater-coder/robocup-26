@@ -15,7 +15,7 @@ def create_attempt_goal_root():
 
     # P1: Scoring a goal
     goal_close = IsGoalCloseBehaviour("Goal Close?")
-    kick_ball = IsGoalCloseBehaviour("Kick Ball")
+    kick_ball = KickBallBehaviour("Kick Ball")
     score_goal = py_trees.composites.Sequence(
         "Score Goal", memory=False, children=[goal_close, kick_ball]
     )
