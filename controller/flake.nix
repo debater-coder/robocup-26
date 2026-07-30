@@ -5,7 +5,8 @@
     nixpkgs.url = "github:NixOS/nixpkgs/nixos-unstable";
   };
 
-  outputs = { nixpkgs, ... }:
+  outputs =
+    { nixpkgs, ... }:
     let
       inherit (nixpkgs) lib;
       forAllSystems = lib.genAttrs lib.systems.flakeExposed;
@@ -34,15 +35,13 @@
             ];
 
             shellHook = ''
-              export GPIOZERO_PIN_FACTORY=lgpio
+                            export CC=cc
+                            export CXX=c++
 
-              export CC=cc
-              export CXX=c++
+                            export CFLAGS="-I${pkgs.lgpio}/include $CFLAGS"
+                            export LDFLAGS="-L${pkgs.lgpio}/lib $LDFLAGS"
 
-              export CFLAGS="-I${pkgs.lgpio}/include $CFLAGS"
-              export LDFLAGS="-L${pkgs.lgpio}/lib $LDFLAGS"
-
-		export LD_LIBRARY_PATH="${pkgs.stdenv.cc.cc.lib}/lib:${pkgs.zlib}/lib:${pkgs.lgpio}/lib:$LD_LIBRARY_PATH"
+              		export LD_LIBRARY_PATH="${pkgs.stdenv.cc.cc.lib}/lib:${pkgs.zlib}/lib:${pkgs.lgpio}/lib:$LD_LIBRARY_PATH"
             '';
           };
         }

@@ -9,6 +9,10 @@ from time import sleep
 
 import cv2 as cv
 import numpy as np
+import rerun as rr
+
+rr.init("calibration")
+rr.connect_grpc()
 
 # === connect to shared memory camera streamer ===
 frame_shape_shm = SharedMemory(name="frame_shape", track=False)
@@ -35,6 +39,7 @@ imgpoints = []  # 2d points in image plane.
 
 while len(objpoints) < 20:
     frame = frame_buffer[:, :, :3]
+    rr.log("frame", rr.Image(frame).compress(jpeg_quality=50))
     gray = cv.cvtColor(frame, cv.COLOR_BGR2GRAY)
 
     # Find the chess board corners
