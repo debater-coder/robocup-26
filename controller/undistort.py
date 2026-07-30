@@ -46,4 +46,4 @@ while True:
         frame, camera_matrix, dist_coeffs, None, new_camera_matrix
     )
 
-    rr.log("frame", rr.Image(undistorted_img).compress(image_quality=50))
+    rr.log("frame", rr.Image(undistorted_img).compress(jpeg_quality=50))
