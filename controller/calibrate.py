@@ -53,8 +53,9 @@ while len(objpoints) < 20:
         imgpoints.append(corners2)
 
         print(f"Successfully captured frame {len(objpoints)}/20")
+        sleep(1)  # wait for new frame
+    sleep(0.02)
 
-    sleep(1)  # wait for new frame
 
 h, w = gray.shape
 ret, mtx, dist, rvecs, tvecs = cv.calibrateCamera(
