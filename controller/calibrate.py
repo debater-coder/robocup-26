@@ -39,12 +39,10 @@ imgpoints = []  # 2d points in image plane.
 
 while len(objpoints) < 20:
     frame = frame_buffer[:, :, :3]
-    rr.log("frame", rr.Image(frame).compress(jpeg_quality=50))
     gray = cv.cvtColor(frame, cv.COLOR_BGR2GRAY)
-    rr.log("gray", rr.Image(gray).compress(jpeg_quality=50))
 
     # Find the chess board corners
-    ret, corners = cv.findChessboardCorners(gray, (7, 6), None)
+    ret, corners = cv.findChessboardCorners(gray, (10, 7), None)
 
     # If found, add object points, image points (after refining them)
     if ret:
