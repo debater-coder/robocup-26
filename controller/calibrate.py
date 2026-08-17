@@ -46,10 +46,11 @@ while len(objpoints) < 20:
 
     # If found, add object points, image points (after refining them)
     if ret:
-        objpoints.append(objp)
+        # The object points (coordinates of checkerboard points in 3D) remain the same for each frame
+        objpoints.append(np.reshape(objp, (1, -1, 3)))
 
-        corners2 = cv.cornerSubPix(gray, corners, (11, 11), (-1, -1), CRITERIA)
-        imgpoints.append(corners2)
+        refined_corners = cv.cornerSubPix(gray, corners, (11, 11), (-1, -1), CRITERIA)
+        imgpoints.append(np.reshape(refined_corners, (-1, 1, 2)))
 
         print(f"Successfully captured frame {len(objpoints)}/20")
         sleep(0.2)  # wait for new frame
@@ -57,15 +58,23 @@ while len(objpoints) < 20:
 
 
 h, w = gray.shape
-ret, mtx, dist, rvecs, tvecs = cv.calibrateCamera(
-    objpoints, imgpoints, (w, h), None, None
+camera_matrix = np.zeros((3, 3), dtype=np.float64)
+distortion = np.zeros((4, 1), dtype=np.float64)
+ret, camera_matrix, distortion, rvecs, tvecs = cv.fisheye.calibrate(
+    objpoints,
+    imgpoints,
+    (w, h),
+    K=camera_matrix,
+    D=distortion,
+    flags=cv.fisheye.CALIB_RECOMPUTE_EXTRINSIC + cv.fisheye.CALIB_FIX_SKEW,
+    criteria=(cv.TERM_CRITERIA_EPS + cv.TERM_CRITERIA_MAX_ITER, 30, 1e-6),
 )
 
 print(f"\nCalibration complete: reproj error = {ret}")
 
 output_data = {
-    "camera_matrix": mtx.tolist(),
-    "distortion_coefficients": dist.tolist(),
+    "camera_matrix": camera_matrix.tolist(),
+    "distortion_coefficients": distortion.tolist(),
     "resolution": [w, h],
 }
 

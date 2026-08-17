@@ -38,12 +38,17 @@ while True:
     if (w, h) != (calib_w, calib_h):
         print("Warning: Image resolution does not match calibration resolution!")
 
-    new_camera_matrix, roi = cv.getOptimalNewCameraMatrix(
-        camera_matrix, dist_coeffs, (w, h), alpha=1, newImgSize=(w, h)
+    map1, map2 = cv.fisheye.initUndistortRectifyMap(
+        K=camera_matrix,
+        D=dist_coeffs,
+        R=np.eye(3),
+        P=camera_matrix,
+        size=(w, h),
+        m1type=cv.CV_16SC2,
     )
 
-    undistorted_img = cv.undistort(
-        frame, camera_matrix, dist_coeffs, None, new_camera_matrix
+    undistorted_img = cv.remap(
+        frame, map1, map2, interpolation=cv.INTER_LINEAR, borderMode=cv.BORDER_CONSTANT
     )
 
     rr.log("frame", rr.Image(undistorted_img).compress(jpeg_quality=50))
