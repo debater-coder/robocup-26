@@ -52,6 +52,10 @@ while len(objpoints) < 20:
         refined_corners = cv.cornerSubPix(gray, corners, (11, 11), (-1, -1), CRITERIA)
         imgpoints.append(np.reshape(refined_corners, (-1, 1, 2)))
 
+        rr.log("frame", rr.Image(frame).compress(jpeg_quality=50))
+        rr.log("gray", rr.Image(gray).compress(jpeg_quality=50))
+        rr.log("points", rr.Points2D(refined_corners))
+
         print(f"Successfully captured frame {len(objpoints)}/20")
         sleep(0.2)  # wait for new frame
     sleep(0.02)
@@ -66,7 +70,7 @@ ret, camera_matrix, distortion, rvecs, tvecs = cv.fisheye.calibrate(
     (w, h),
     K=camera_matrix,
     D=distortion,
-    flags=cv.fisheye.CALIB_RECOMPUTE_EXTRINSIC + cv.fisheye.CALIB_FIX_SKEW,
+    flags=cv.CALIB_RECOMPUTE_EXTRINSIC + cv.CALIB_FIX_SKEW,
     criteria=(cv.TERM_CRITERIA_EPS + cv.TERM_CRITERIA_MAX_ITER, 30, 1e-6),
 )
 
