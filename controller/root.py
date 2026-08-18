@@ -1,6 +1,6 @@
 import py_trees
 
-from .behaviours import (
+from behaviours import (
     CameraBehaviour,
     ChaseBehaviour,
     GetGoalTargetBehaviour,

@@ -1,12 +1,12 @@
-from .CameraBehaviour import CameraBehaviour
-from .ChaseBehaviour import ChaseBehaviour
-from .GetGoalTargetBehaviour import GetGoalTargetBehaviour
-from .GoForwardsBehaviour import GoForwardsBehaviour
-from .HasPossessionBehaviour import HasPossessionBehaviour
-from .IsGoalCloseBehaviour import IsGoalCloseBehaviour
-from .KickBallBehaviour import KickBallBehaviour
-from .OutOfBoundsBehaviour import OutOfBoundsBehaviour
-from .StopGoBehaviour import StopGoBehaviour
+from behaviours.CameraBehaviour import CameraBehaviour
+from behaviours.ChaseBehaviour import ChaseBehaviour
+from behaviours.GetGoalTargetBehaviour import GetGoalTargetBehaviour
+from behaviours.GoForwardsBehaviour import GoForwardsBehaviour
+from behaviours.HasPossessionBehaviour import HasPossessionBehaviour
+from behaviours.IsGoalCloseBehaviour import IsGoalCloseBehaviour
+from behaviours.KickBallBehaviour import KickBallBehaviour
+from behaviours.OutOfBoundsBehaviour import OutOfBoundsBehaviour
+from behaviours.StopGoBehaviour import StopGoBehaviour
 
 __all__ = [
     "CameraBehaviour",
