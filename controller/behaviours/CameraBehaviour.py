@@ -1,13 +1,8 @@
-import typing
 from multiprocessing.shared_memory import SharedMemory
-from time import sleep
 
-import cv2
 import numpy as np
 import py_trees
-import rerun as rr
-from cv2.typing import MatLike
-from gpiozero import LED, Button
+import zmq
 
 from vision.vision import process_frame
 
@@ -45,23 +40,21 @@ class CameraBehaviour(py_trees.behaviour.Behaviour):
         self.frame_buffer = np.ndarray(
             self.frame_shape, buffer=self.frame_buffer_shm.buf, dtype="u1"
         )
-        self.button = Button(19)
-        self.led = LED(13)
-
-        def button_handler():
-            self.go_to_cyan = not self.go_to_cyan
-            if self.go_to_cyan:
-                self.led.on()
-                self.feedback_message = "scoring cyan"
-            else:
-                self.led.off()
-                self.feedback_message = "scoring yellow"
-
-        self.button.when_activated = button_handler
+        self.context = zmq.Context.instance()
+        self.socket = self.context.socket(zmq.SUB)
+        self.socket.connect("ipc://@ui")
+        self.socket.setsockopt_string(zmq.SUBSCRIBE, "goal_change")
 
     def initialise(self): ...
 
     def update(self):
+        try:
+            while True:
+                _topic, payload = self.socket.recv_multipart(flags=zmq.NOBLOCK)
+                self.go_to_cyan = payload == b"cyan"
+        except zmq.Again:
+            pass
+
         frame = self.frame_buffer[:, :, :3]
         info = process_frame(frame, self.go_to_cyan)
 

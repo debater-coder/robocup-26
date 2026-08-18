@@ -12,5 +12,5 @@ dependencies = [
     "pyserial>=3.5",
     "requests>=2.33.1",
     "rerun-sdk>=0.33.0",
-    "python-periphery>=2.4.1",
+    "pyzmq>=27.1.0",
 ]

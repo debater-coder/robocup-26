@@ -31,15 +31,11 @@
 
               pkgs.zlib
               pkgs.glibc.dev
-              pkgs.lgpio
             ];
 
             shellHook = ''
-                            export CC=cc
-                            export CXX=c++
-
-                            export CFLAGS="-I${pkgs.lgpio}/include $CFLAGS"
-                            export LDFLAGS="-L${pkgs.lgpio}/lib $LDFLAGS"
+                  export CC=cc
+                  export CXX=c++
 
               		export LD_LIBRARY_PATH="${pkgs.stdenv.cc.cc.lib}/lib:${pkgs.zlib}/lib:${pkgs.lgpio}/lib:$LD_LIBRARY_PATH"
             '';

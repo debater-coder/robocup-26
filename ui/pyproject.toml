@@ -1,0 +1,10 @@
+[project]
+name = "ui"
+version = "0.1.0"
+description = "Add your description here"
+readme = "README.md"
+requires-python = ">=3.14"
+dependencies = [
+    "gpiozero>=2.0.1.post3",
+    "pyzmq>=27.1.0",
+]
