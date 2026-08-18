@@ -35,6 +35,58 @@ camera_matrix = np.array(calib_data["camera_matrix"], dtype=np.float64)
 dist_coeffs = np.array(calib_data["distortion_coefficients"], dtype=np.float64)
 calib_w, calib_h = calib_data["resolution"]
 
+new_camera_matrix = cv2.fisheye.estimateNewCameraMatrixForUndistortRectify(
+    camera_matrix,
+    dist_coeffs,
+    (calib_w, calib_h),
+    np.eye(3),
+    balance=1,  # undistorts so that entire frame fits in the remapped frame
+)
+inverse_matrix = np.linalg.inv(new_camera_matrix)
+map1, map2 = cv2.fisheye.initUndistortRectifyMap(
+    K=camera_matrix,
+    D=dist_coeffs,
+    R=np.eye(3),
+    P=new_camera_matrix,
+    size=(calib_w, calib_h),
+    m1type=cv2.CV_16SC2,
+)
+rotation = R.from_euler("x", -CAMERA_ELEVATION_ANGLE)
+
+# This is a homography matrix, the last element gets scaled to one after matrix multiplication
+
+# vector gets converted to normalised coordinates, then rotated downwards
+ground_matrix = rotation.as_matrix() @ inverse_matrix
+ground_matrix = (
+    np.array([[1, 0, 0], [0, 0, 1], [0, 1, 0]]) @ ground_matrix
+)  # reshuffle the vector so it has X-Z first and Y is used to scale so it intersects with a ground plane
+
+ground_matrix = (
+    np.diag([CAMERA_HEIGHT, CAMERA_HEIGHT, 1]) @ ground_matrix
+)  # By scaling up X, Z by CAMERA_HEIGHT, has the effect of finding X and Z values such that Y = CAMERA_HEIGHT while only extending the ray, i.e
+# X *= CAMERA_HEIGHT / Y
+# Z *= CAMERA_HEIGHT / Y
+
+
+def transform_array(arr):
+    """Transforms an array of points of shape (N, 2) from image coordinates to plane coordinates (in mm)"""
+    points = np.hstack([arr, np.ones((len(arr), 1))])  # make into 3D arrays (X, Y, 1)
+    projected = (
+        points @ ground_matrix.T
+    )  # project every **row** as if it was a column vector
+
+    valid = (
+        projected[:, 2] > 0
+    )  # Don't project the points backwards through the camera onto the plane
+
+    plane_coords = np.full((len(arr), 2), np.nan)  # Initialise NaN plane coords
+    # Renormalise so that it is actually intersecting with that plane
+    plane_coords[valid] = (
+        projected[valid, :2] / projected[valid, 2:3]
+    )  # Numpy boolean masks are very cool
+
+    return plane_coords
+
 
 @dataclass
 class VisionInfo:
@@ -48,52 +100,9 @@ def log_image(path: str, frame: MatLike, idx):
         rr.log(path, rr.Image(frame).compress(jpeg_quality=50))
 
 
-def project_pixel(x, y, inverse_mtx):
-    """Projects a pixel from the undistorted image -> coordinates on the IRL plane, relative to camera"""
-    image_pt = np.array([x, y, 1.0])
-    ray = inverse_mtx @ image_pt
-
-    rotation = R.from_euler("x", -CAMERA_ELEVATION_ANGLE)
-    ray = rotation.apply(ray)
-
-    # scale so Y = -HEIGHT
-
-    if ray[1] == 0:
-        return None
-
-    t = CAMERA_HEIGHT / ray[1]  # parameter along ray
-    if t < 0:
-        return None
-    point = ray * t
-
-    return np.array([point[0], point[2]])
-
-
-def project_line(line, inverse_mtx):
-    line = [project_pixel(pt[0], pt[1], inverse_mtx=inverse_mtx) for pt in line]
-    return None if line[0] is None or line[1] is None else line
-
-
 def process_frame(frame: MatLike, go_to_cyan: bool, frame_idx=0):
     goal_lower = CYAN_LOWER if go_to_cyan else YELLOW_LOWER
     goal_upper = CYAN_UPPER if go_to_cyan else YELLOW_UPPER
-
-    new_camera_matrix = cv2.fisheye.estimateNewCameraMatrixForUndistortRectify(
-        camera_matrix,
-        dist_coeffs,
-        (calib_w, calib_h),
-        np.eye(3),
-        balance=1,  # undistorts so that entire frame fits in the remapped frame
-    )
-    inverse_mtx = np.linalg.inv(new_camera_matrix)
-    map1, map2 = cv2.fisheye.initUndistortRectifyMap(
-        K=camera_matrix,
-        D=dist_coeffs,
-        R=np.eye(3),
-        P=new_camera_matrix,
-        size=(calib_w, calib_h),
-        m1type=cv2.CV_16SC2,
-    )
 
     frame = cv2.remap(
         frame,
@@ -104,6 +113,26 @@ def process_frame(frame: MatLike, go_to_cyan: bool, frame_idx=0):
     )
 
     log_image("/camera/image", frame, frame_idx)
+
+    # to stop negative cutoff
+    translation = np.array(
+        [
+            [
+                1,
+                0,
+                1500,
+            ],
+            [
+                0,
+                1,
+                1500,
+            ],
+            [0, 0, 1],
+        ],
+        dtype=np.float32,
+    )
+    world_image = cv2.warpPerspective(frame, translation @ ground_matrix, (3000, 3000))
+    log_image("/camera/world/image", world_image, frame_idx)
     blurred = cv2.GaussianBlur(frame, (11, 11), 0)
     hsv = cv2.cvtColor(blurred, cv2.COLOR_RGB2HSV)
 
@@ -140,9 +169,10 @@ def process_frame(frame: MatLike, go_to_cyan: bool, frame_idx=0):
     lines = cv2.HoughLinesP(
         edges, 1, np.pi / 180, threshold=50, minLineLength=30, maxLineGap=50
     ).reshape(-1, 2, 2)
+
     rr.log("/camera/lines/lines", rr.LineStrips2D(lines))
 
-    projected_lines = [project_line(line, inverse_mtx) for line in lines]
+    projected_lines = transform_array(lines.reshape(-1, 2)).reshape(-1, 2, 2)
     rr.log(
         "/camera/world",
         rr.Transform3D(
