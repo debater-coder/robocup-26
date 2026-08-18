@@ -50,7 +50,7 @@ while len(objpoints) < 20:
         objpoints.append(np.reshape(objp, (1, -1, 3)).astype(np.float32))
 
         refined_corners = cv.cornerSubPix(gray, corners, (11, 11), (-1, -1), CRITERIA)
-        imgpoints.append(np.reshape(refined_corners, (1, -1, 2).astype(np.float32)))
+        imgpoints.append(np.reshape(refined_corners, (1, -1, 2)).astype(np.float32))
 
         rr.log("frame", rr.Image(frame).compress(jpeg_quality=50))
         rr.log("gray", rr.Image(gray).compress(jpeg_quality=50))
