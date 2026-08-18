@@ -143,6 +143,12 @@ def process_frame(frame: MatLike, go_to_cyan: bool, frame_idx=0):
     rr.log("/camera/lines/lines", rr.LineStrips2D(lines))
 
     projected_lines = [project_line(line, inverse_mtx) for line in lines]
+    rr.log(
+        "/camera/world",
+        rr.Transform3D(
+            translation=[0, 0, -1],
+        ),
+    )
     rr.log("/camera/world/lines", rr.LineStrips2D(projected_lines))
 
     # Goal
