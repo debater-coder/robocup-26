@@ -5,6 +5,7 @@ Description=RoboCup UI service
 User=robocup
 ExecStart=/usr/bin/python3 -u /home/robocup/robocup/robocup-26/ui/main.py
 Environment=GPIOZERO_PIN_FACTORY=lgpio
+WorkingDirectory=/home/robocup/robocup-26/ui
 Restart=always
 RestartSec=3
 
