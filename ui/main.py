@@ -28,7 +28,7 @@ def handle_goal_change():
 def handle_go_change():
     global go
     go = not go
-    if stop_go_switch.is_active:
+    if not stop_go_switch.is_active:
         socket.send_multipart([b"go_change", b"go"])
     else:
         socket.send_multipart([b"go_change", b"stop"])
