@@ -7,6 +7,10 @@ import cv2
 import numpy as np
 import rerun as rr
 from cv2.typing import MatLike
+from scipy.spatial.transform import Rotation as R
+
+CAMERA_HEIGHT = 120  # mm
+CAMERA_ELEVATION_ANGLE = np.radians(15)  # down = +ve
 
 ORANGE_LOWER = np.array([0, 160, 120])
 ORANGE_UPPER = np.array([15, 255, 255])
@@ -44,18 +48,49 @@ def log_image(path: str, frame: MatLike, idx):
         rr.log(path, rr.Image(frame).compress(jpeg_quality=50))
 
 
+def project_pixel(x, y, inverse_mtx):
+    """Projects a pixel from the undistorted image -> coordinates on the IRL plane, relative to camera"""
+    image_pt = np.array([x, y, 1.0])
+    ray = inverse_mtx @ image_pt
+
+    rotation = R.from_euler("x", -CAMERA_ELEVATION_ANGLE)
+    ray = rotation.apply(ray)
+
+    # scale so Y = -HEIGHT
+
+    if ray[1] == 0:
+        return None
+
+    t = CAMERA_HEIGHT / ray[1]  # parameter along ray
+    if t < 0:
+        return None
+    point = ray * t
+
+    return np.array([point[0], point[2]])
+
+
+def project_line(line, inverse_mtx):
+    line = [project_pixel(pt[0], pt[1], inverse_mtx=inverse_mtx) for pt in line]
+    return None if line[0] is None or line[1] is None else line
+
+
 def process_frame(frame: MatLike, go_to_cyan: bool, frame_idx=0):
     goal_lower = CYAN_LOWER if go_to_cyan else YELLOW_LOWER
     goal_upper = CYAN_UPPER if go_to_cyan else YELLOW_UPPER
 
-    k = cv2.fisheye.estimateNewCameraMatrixForUndistortRectify(
-        camera_matrix, dist_coeffs, (calib_w, calib_h), np.eye(3), balance=1
+    new_camera_matrix = cv2.fisheye.estimateNewCameraMatrixForUndistortRectify(
+        camera_matrix,
+        dist_coeffs,
+        (calib_w, calib_h),
+        np.eye(3),
+        balance=1,  # undistorts so that entire frame fits in the remapped frame
     )
+    inverse_mtx = np.linalg.inv(new_camera_matrix)
     map1, map2 = cv2.fisheye.initUndistortRectifyMap(
         K=camera_matrix,
         D=dist_coeffs,
         R=np.eye(3),
-        P=k,
+        P=new_camera_matrix,
         size=(calib_w, calib_h),
         m1type=cv2.CV_16SC2,
     )
@@ -104,8 +139,11 @@ def process_frame(frame: MatLike, go_to_cyan: bool, frame_idx=0):
     log_image("/camera/lines/edges", edges, frame_idx)
     lines = cv2.HoughLinesP(
         edges, 1, np.pi / 180, threshold=50, minLineLength=30, maxLineGap=50
-    )
-    rr.log("/camera/lines/lines", rr.LineStrips2D(lines.reshape(-1, 2, 2)))
+    ).reshape(-1, 2, 2)
+    rr.log("/camera/lines/lines", rr.LineStrips2D(lines))
+
+    projected_lines = [project_line(line, inverse_mtx) for line in lines]
+    rr.log("/camera/world/lines", rr.LineStrips2D(projected_lines))
 
     # Goal
     mask = cv2.inRange(hsv, goal_lower, goal_upper)
