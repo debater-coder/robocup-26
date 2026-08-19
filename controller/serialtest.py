@@ -67,6 +67,7 @@ if __name__ == "__main__":
         i = input("Controls (_ _ _ _): ")
         if i == "reset":
             ser.write(b"\0\xff\0")
+            ser.flush()
             continue
         x = list(map(int, i.split(" ")))
         periods = send_command(ser, x)
