@@ -172,7 +172,7 @@ class PicoCommand(SupportsCommand):
             self.ser.write(b"\0" + cobs.encode(b"\xff") + b"\0")
             self.ser.flush()
 
-            sleep(0.1)  # wait for reconnect
+            sleep(0.3)  # wait for reconnect
             ports = [
                 p.device
                 for p in serial.tools.list_ports.comports()
