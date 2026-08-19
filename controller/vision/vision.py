@@ -168,18 +168,23 @@ def process_frame(frame: MatLike, go_to_cyan: bool, frame_idx=0):
     log_image("/camera/lines/edges", edges, frame_idx)
     lines = cv2.HoughLinesP(
         edges, 1, np.pi / 180, threshold=50, minLineLength=30, maxLineGap=50
-    ).reshape(-1, 2, 2)
-
-    rr.log("/camera/lines/lines", rr.LineStrips2D(lines))
-
-    projected_lines = (
-        np.hstack(
-            [transform_array(lines.reshape(-1, 2)), np.zeros((len(lines) * 2, 1))]
-        )
-        .reshape(-1, 2, 3)
-        .astype(np.float32)
     )
-    rr.log("/camera/world/lines", rr.LineStrips3D(projected_lines))
+    if lines:
+        lines = lines.reshape(-1, 2, 2)
+
+        rr.log("/camera/lines/lines", rr.LineStrips2D(lines))
+
+        projected_lines = (
+            np.hstack(
+                [transform_array(lines.reshape(-1, 2)), np.zeros((len(lines) * 2, 1))]
+            )
+            .reshape(-1, 2, 3)
+            .astype(np.float32)
+        )
+        rr.log("/camera/world/lines", rr.LineStrips3D(projected_lines))
+    else:
+        rr.log("/camera/lines", rr.Clear(recursive=True))
+        rr.log("/camera/world/lines", rr.Clear(recursive=True))
 
     # Goal
     mask = cv2.inRange(hsv, goal_lower, goal_upper)
