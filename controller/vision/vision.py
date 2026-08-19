@@ -132,22 +132,6 @@ def process_frame(frame: MatLike, go_to_cyan: bool, frame_idx=0):
         ],
         dtype=np.float32,
     )
-    if frame_idx % 40 == 0:
-        # offload to another thread
-        def log_world_perspective(frame):
-            world_image = cv2.warpPerspective(
-                frame, translation @ ground_matrix, (3000, 3000)
-            )
-            rr.log(
-                "camera/world/image",
-                rr.Transform3D(translation=[0, 0, -1]),
-                rr.Pinhole(
-                    image_plane_distance=1.0, focal_length=1, width=3000, height=3000
-                ),
-                rr.Image(world_image).compress(jpeg_quality=50),
-            )
-
-        thread = threading.Thread(target=log_world_perspective, args=(frame.copy()))
 
     blurred = cv2.GaussianBlur(frame, (11, 11), 0)
     hsv = cv2.cvtColor(blurred, cv2.COLOR_RGB2HSV)
