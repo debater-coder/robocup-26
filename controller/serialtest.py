@@ -1,9 +1,12 @@
 from time import sleep
 
 import serial
+import serial.tools.list_ports
 from cobs import cobs
 
-ser = serial.Serial("/dev/ttyACM0", timeout=1, write_timeout=1)
+ports = [p.device for p in serial.tools.list_ports.comports() if "ttyACM" in p.device]
+ports.sort()
+ser = serial.Serial(ports[0], timeout=1, write_timeout=1)
 
 
 class CommandFailedError(Exception):
