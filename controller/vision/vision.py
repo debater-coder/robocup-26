@@ -169,7 +169,7 @@ def process_frame(frame: MatLike, go_to_cyan: bool, frame_idx=0):
     lines = cv2.HoughLinesP(
         edges, 1, np.pi / 180, threshold=50, minLineLength=30, maxLineGap=50
     )
-    if lines:
+    if lines is not None:
         lines = lines.reshape(-1, 2, 2)
 
         rr.log("/camera/lines/lines", rr.LineStrips2D(lines))
