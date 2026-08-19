@@ -132,6 +132,11 @@ def process_frame(frame: MatLike, go_to_cyan: bool, frame_idx=0):
         dtype=np.float32,
     )
     world_image = cv2.warpPerspective(frame, translation @ ground_matrix, (3000, 3000))
+    rr.log(
+        "camera/world/image",
+        rr.Transform3D(translation=[0, 0, -1]),
+        rr.Pinhole(image_plane_distance=1.0, focal_length=1, width=3000, height=3000),
+    )
     log_image("/camera/world/image", world_image, frame_idx)
     blurred = cv2.GaussianBlur(frame, (11, 11), 0)
     hsv = cv2.cvtColor(blurred, cv2.COLOR_RGB2HSV)
@@ -172,14 +177,14 @@ def process_frame(frame: MatLike, go_to_cyan: bool, frame_idx=0):
 
     rr.log("/camera/lines/lines", rr.LineStrips2D(lines))
 
-    projected_lines = transform_array(lines.reshape(-1, 2)).reshape(-1, 2, 2)
-    rr.log(
-        "/camera/world",
-        rr.Transform3D(
-            translation=[0, 0, -1],
-        ),
+    projected_lines = (
+        np.hstack(
+            [transform_array(lines.reshape(-1, 2)), np.zeros((len(lines) * 2, 1))]
+        )
+        .reshape(-1, 2, 3)
+        .astype(np.float32)
     )
-    rr.log("/camera/world/lines", rr.LineStrips2D(projected_lines))
+    rr.log("/camera/world/lines", rr.LineStrips3D(projected_lines))
 
     # Goal
     mask = cv2.inRange(hsv, goal_lower, goal_upper)
