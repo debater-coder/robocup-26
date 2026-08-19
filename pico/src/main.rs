@@ -390,7 +390,10 @@ async fn handle_commands<'d, T: Instance + 'd>(
                 }
                 Ok(None) => {}
                 Ok(Some(n)) => {
-                    if n != 16 {
+                    // Hard reset
+                    if n == 1 {
+                        embassy_rp::rom_data::reset_to_usb_boot(0, 0);
+                    } else if n != 16 {
                         warn!("Invalid packet size");
                     } else {
                         let mut control_dst = [0u8; 16];

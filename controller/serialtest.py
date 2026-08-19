@@ -64,6 +64,10 @@ def send_command(ser: serial.Serial, controls: list[int]):
 
 if __name__ == "__main__":
     while True:
-        x = list(map(int, input("Controls (_ _ _ _): ").split(" ")))
+        i = input("Controls (_ _ _ _): ")
+        if i == "reset":
+            ser.write(b"\0\xff\0")
+            continue
+        x = list(map(int, i.split(" ")))
         periods = send_command(ser, x)
         print(f"New data: {' '.join([f'{period} mm' for period in periods])}")
