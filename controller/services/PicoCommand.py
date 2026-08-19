@@ -2,6 +2,7 @@ import math
 
 import rerun as rr
 import serial
+import serial.tools.list_ports
 from cobs import cobs
 
 from protocols.command import SupportsCommand
@@ -31,7 +32,11 @@ class LineStatusDebounce:
 
 class PicoCommand(SupportsCommand):
     def __init__(self):
-        self.ser = serial.Serial("/dev/ttyACM0", timeout=0.02, write_timeout=0.02)
+        ports = [
+            p.device for p in serial.tools.list_ports.comports() if "ttyACM" in p.device
+        ]
+        ports.sort()
+        self.ser = serial.Serial(ports[0], timeout=1, write_timeout=1)
         self.command = (0, 0, 0, 0)
 
         self.res = [0, 0, 0, 0, 0]
