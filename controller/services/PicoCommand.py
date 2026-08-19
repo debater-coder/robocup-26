@@ -1,4 +1,5 @@
 import math
+from time import sleep
 
 import rerun as rr
 import serial
@@ -41,6 +42,7 @@ class PicoCommand(SupportsCommand):
 
         self.res = [0, 0, 0, 0, 0]
         self.line_status_debounce = LineStatusDebounce()
+        self.tof_gone_for = 0
 
     def read_cobs_packet(self):
         buf = bytearray()
@@ -155,7 +157,31 @@ class PicoCommand(SupportsCommand):
         """
         Returns the TOF from ball sensor as integer or None if not available
         """
-        return None if self.res[3] == 0 else self.res[3]
+        tof = None if self.res[3] == 0 else self.res[3]
+
+        if tof is None:
+            self.tof_gone_for += 1
+        else:
+            self.tof_gone_for = 0
+
+        if self.tof_gone_for >= 3:
+            rr.log(
+                "/pico/status", rr.TextLog("Pico TOF gone for too long, resetting...")
+            )
+            # Hard reset
+            self.ser.write(b"\0" + cobs.encode(b"\xff") + b"\0")
+            self.ser.flush()
+
+            sleep(0.1)  # wait for reconnect
+            ports = [
+                p.device
+                for p in serial.tools.list_ports.comports()
+                if "ttyACM" in p.device
+            ]
+            ports.sort()
+            self.ser = serial.Serial(ports[0], timeout=1, write_timeout=1)
+
+        return tof
 
     def get_line_status(self) -> int:
         r"""
