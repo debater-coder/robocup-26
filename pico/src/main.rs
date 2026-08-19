@@ -48,6 +48,7 @@ static CHASSIS_DISPLACEMENT_WATCH: Watch<CriticalSectionRawMutex, ChassisVector,
 
 static DRIBBLER_CONTROL_SIGNAL: Signal<CriticalSectionRawMutex, i32> = Signal::new();
 static TOF_DISTANCE_SIGNAL: Signal<CriticalSectionRawMutex, u16> = Signal::new();
+static RESET_WATCH: Watch<CriticalSectionRawMutex, bool, 8> = Watch::new();
 
 static ODOM_WATCH_FL: Watch<CriticalSectionRawMutex, i32, 8> = Watch::new();
 static ODOM_WATCH_FR: Watch<CriticalSectionRawMutex, i32, 8> = Watch::new();
@@ -179,9 +180,12 @@ impl ErrorType for NoopOutput {
 /// This will allow resets in case of panic (but not any other type of hand)
 #[embassy_executor::task]
 async fn feed_watchdog(mut watchdog: Watchdog) {
+    let mut recv = RESET_WATCH.receiver().unwrap();
     loop {
-        watchdog.feed();
-        Timer::after_millis(100).await;
+        if !recv.try_get().unwrap_or(false) {
+            watchdog.feed();
+            Timer::after_millis(100).await;
+        }
     }
 }
 
@@ -378,6 +382,7 @@ async fn handle_commands<'d, T: Instance + 'd>(
     let mut dest = [0; 1024];
     let mut decoder = CobsDecoder::new(&mut dest);
     let mut recv = CHASSIS_DISPLACEMENT_WATCH.receiver().unwrap();
+    let reset_sender = RESET_WATCH.sender();
 
     loop {
         let n = class.read_packet(&mut buf).await?;
@@ -392,7 +397,7 @@ async fn handle_commands<'d, T: Instance + 'd>(
                 Ok(Some(n)) => {
                     // Hard reset
                     if n == 1 {
-                        embassy_rp::rom_data::reset_to_usb_boot(0, 0);
+                        reset_sender.send(true);
                     } else if n != 16 {
                         warn!("Invalid packet size");
                     } else {
