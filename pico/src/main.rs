@@ -339,6 +339,8 @@ async fn main(spawner: Spawner) {
             loop {
                 if let Ok(Some(reading)) = tof.try_read() {
                     TOF_DISTANCE_SIGNAL.signal(reading);
+                } else {
+                    warn!("Failed to read from vl53l0x!")
                 }
                 Timer::after_millis(100).await;
             }

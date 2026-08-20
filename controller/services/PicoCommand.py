@@ -1,4 +1,5 @@
 import math
+import multiprocessing
 
 import rerun as rr
 import serial
@@ -6,6 +7,7 @@ import serial.tools.list_ports
 from cobs import cobs
 
 from protocols.command import SupportsCommand
+from serialdebug import task
 
 
 class CommandFailedError(Exception):
@@ -41,6 +43,10 @@ class PicoCommand(SupportsCommand):
 
         self.res = [0, 0, 0, 0, 0]
         self.line_status_debounce = LineStatusDebounce()
+
+        self.debug_process = multiprocessing.Process(target=task, args=(ports[1],))
+        self.debug_process.daemon = True  # so it automatically cleans up
+        self.debug_process.start()
 
     def read_cobs_packet(self):
         buf = bytearray()
