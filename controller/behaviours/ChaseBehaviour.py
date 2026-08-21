@@ -1,8 +1,11 @@
 import typing
 
+import numpy as np
 import py_trees
 
 from protocols.command import SupportsCommand
+
+K_p = 3
 
 
 class ChaseBehaviour(py_trees.behaviour.Behaviour):
@@ -41,17 +44,17 @@ class ChaseBehaviour(py_trees.behaviour.Behaviour):
             raise TypeError("Expected command to be passed in ChaseBehaviour.setup()")
 
     def update(self):
-        w, h = self.blackboard.camera.shape
-        if centre := self.blackboard.target:
-            if centre[0] > w * 0.6:
-                self.command.send_command(200, 0, 4, 1)
-                self.feedback_message = "turning right"
-            elif centre[0] < w * 0.4:
-                self.command.send_command(200, 0, -4, 1)
-                self.feedback_message = "turning left"
-            else:
-                self.command.send_command(300, 0, 0, 1)
-                self.feedback_message = "forwards"
+        target = self.blackboard.target
+        if target:
+            self.feedback_message = "chasing target"
+            velocity = target * K_p
+            vel_length = np.linalg.norm(velocity)
+
+            if vel_length != 0:
+                velocity *= min(vel_length, 300) / vel_length
+
+            self.command.send_command(velocity[0], velocity[1], 0, 1)
+
         else:
             self.command.send_command(0, 0, 10, 1)
             self.feedback_message = "looking for target"

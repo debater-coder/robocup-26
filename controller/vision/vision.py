@@ -22,7 +22,7 @@ YELLOW_UPPER = np.array([35, 255, 255])
 CYAN_LOWER = np.array([85, 50, 50])
 CYAN_UPPER = np.array([130, 255, 255])
 
-WHITE_LOWER = np.array([0, 0, 180])
+WHITE_LOWER = np.array([0, 0, 230])
 WHITE_UPPER = np.array([180, 30, 255])
 
 config_path = os.path.join(
@@ -91,9 +91,8 @@ def transform_array(arr):
 
 @dataclass
 class VisionInfo:
-    ball_centre: tuple[float, float] | None
-    ball_radius: float | None
-    goal_bb: tuple[float, float, float, float] | None
+    ball: tuple[float, float] | None
+    goal: tuple[float, float] | None
 
 
 def log_image(path: str, frame: MatLike, idx):
@@ -105,33 +104,7 @@ def process_frame(frame: MatLike, go_to_cyan: bool, frame_idx=0):
     goal_lower = CYAN_LOWER if go_to_cyan else YELLOW_LOWER
     goal_upper = CYAN_UPPER if go_to_cyan else YELLOW_UPPER
 
-    frame = cv2.remap(
-        frame,
-        map1,
-        map2,
-        interpolation=cv2.INTER_LINEAR,
-        borderMode=cv2.BORDER_CONSTANT,
-    )
-
     log_image("/camera/image", frame, frame_idx)
-
-    # to stop negative cutoff
-    translation = np.array(
-        [
-            [
-                1,
-                0,
-                1500,
-            ],
-            [
-                0,
-                1,
-                1500,
-            ],
-            [0, 0, 1],
-        ],
-        dtype=np.float32,
-    )
 
     blurred = cv2.GaussianBlur(frame, (11, 11), 0)
     hsv = cv2.cvtColor(blurred, cv2.COLOR_RGB2HSV)
@@ -141,25 +114,34 @@ def process_frame(frame: MatLike, go_to_cyan: bool, frame_idx=0):
     log_image("/camera/ball/mask", mask, frame_idx)
     mask = cv2.erode(mask, typing.cast(MatLike, None), iterations=2)
     mask = cv2.dilate(mask, typing.cast(MatLike, None), iterations=2)
-    contours = cv2.findContours(
-        mask.copy(), cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_SIMPLE
-    )[0]
+    contours = list(
+        cv2.findContours(mask.copy(), cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_SIMPLE)[0]
+    )
 
-    if len(contours) > 0:
-        contour = max(contours, key=cv2.contourArea)
+    contours.sort(key=cv2.contourArea, reverse=True)
+
+    ball_centre = None
+    for contour in contours:
         ((x, y), radius) = cv2.minEnclosingCircle(contour)
         rr.log(
             "/camera/ball/circle",
             rr.Ellipses2D(half_sizes=[(radius, radius)], centers=[(x, y)]),
         )
 
-        ball_centre = (x, y)
-        ball_radius = radius
+        ball_centre = transform_array(np.array([[x, y]]))[0]
 
-    else:
+        if (
+            np.isnan(ball_centre).any() or np.linalg.norm(ball_centre) > 3000
+        ):  # filter out too far away
+            continue
+
+        ball_centre = tuple(ball_centre)
+
+        rr.log("/camera/world/ball", rr.Points2D(positions=[ball_centre]))
+
+    if not ball_centre:
         rr.log("/camera/ball/circle", rr.Clear(recursive=True))
-        ball_centre = None
-        ball_radius = None
+        rr.log("/camera/world/ball", rr.Clear(recursive=True))
 
     # White lines
     mask = cv2.inRange(hsv, WHITE_LOWER, WHITE_UPPER)
@@ -191,23 +173,35 @@ def process_frame(frame: MatLike, go_to_cyan: bool, frame_idx=0):
     log_image("/camera/goal/mask", mask, frame_idx)
     mask = cv2.erode(mask, typing.cast(MatLike, None), iterations=2)
     mask = cv2.dilate(mask, typing.cast(MatLike, None), iterations=2)
-    contours = cv2.findContours(
-        mask.copy(), cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_SIMPLE
-    )[0]
-    if len(contours) > 0:
-        contour = max(contours, key=cv2.contourArea)
+    contours = list(
+        cv2.findContours(mask.copy(), cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_SIMPLE)[0]
+    )
+
+    contours.sort(key=cv2.contourArea, reverse=True)
+
+    goal_centre = None
+
+    for contour in contours:
         x, y, w, h = cv2.boundingRect(contour)
         rr.log(
             "/camera/goal/bb",
             rr.Boxes2D(mins=[(x, y)], sizes=[(w, h)]),
         )
-        goal_bb = (x, y, w, h)
+        goal_centre = transform_array(np.array([[x + w / 2, y + h]]))[0]
 
-    else:
+        if (
+            np.isnan(goal_centre).any() or np.linalg.norm(goal_centre) > 3000
+        ):  # filter out too far away
+            continue
+
+        goal_centre = tuple(goal_centre)
+
+        rr.log("/camera/world/goal", rr.Points2D(positions=[goal_centre]))
+
+    if not goal_centre:
         rr.log("/camera/goal/bb", rr.Clear(recursive=True))
-        goal_bb = None
-
-    return VisionInfo(ball_centre=ball_centre, ball_radius=ball_radius, goal_bb=goal_bb)
+        rr.log("/camera/world/goal", rr.Clear(recursive=True))
+    return VisionInfo(ball=ball_centre, goal=goal_centre)
 
 
 # Vision testing repl
