@@ -73,7 +73,9 @@ def transform_array(arr):
     points = cv2.fisheye.undistortPoints(
         arr.reshape(-1, 1, 2).astype(np.float64), camera_matrix, dist_coeffs
     ).reshape((-1, 2))
-    points = np.hstack([arr, np.ones((len(arr), 1))])  # make into 3D arrays (X, Y, 1)
+    points = np.hstack(
+        [points, np.ones((len(arr), 1))]
+    )  # make into 3D arrays (X, Y, 1)
     projected = (
         points @ ground_matrix.T
     )  # project every **row** as if it was a column vector
