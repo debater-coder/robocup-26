@@ -47,7 +47,7 @@ class ChaseBehaviour(py_trees.behaviour.Behaviour):
         target = self.blackboard.target
         if target:
             self.feedback_message = "chasing target"
-            velocity = target * K_p
+            velocity = K_p * np.array(target)
             vel_length = np.linalg.norm(velocity)
 
             if vel_length != 0:
