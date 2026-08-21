@@ -10,7 +10,6 @@ from behaviours.StopGoBehaviour import StopGoBehaviour
 __all__ = [
     "CameraBehaviour",
     "ChaseBehaviour",
-    "GetGoalTargetBehaviour",
     "HasPossessionBehaviour",
     "IsGoalCloseBehaviour",
     "KickBallBehaviour",

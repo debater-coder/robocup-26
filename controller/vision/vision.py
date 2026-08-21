@@ -43,7 +43,6 @@ new_camera_matrix = cv2.fisheye.estimateNewCameraMatrixForUndistortRectify(
     np.eye(3),
     balance=1,  # undistorts so that entire frame fits in the remapped frame
 )
-inverse_matrix = np.linalg.inv(new_camera_matrix)
 map1, map2 = cv2.fisheye.initUndistortRectifyMap(
     K=camera_matrix,
     D=dist_coeffs,
@@ -57,7 +56,7 @@ rotation = R.from_euler("x", -CAMERA_ELEVATION_ANGLE)
 # This is a homography matrix, the last element gets scaled to one after matrix multiplication
 
 # vector gets converted to normalised coordinates, then rotated downwards
-ground_matrix = rotation.as_matrix() @ inverse_matrix
+ground_matrix = rotation.as_matrix()
 ground_matrix = (
     np.array([[1, 0, 0], [0, 0, 1], [0, 1, 0]]) @ ground_matrix
 )  # reshuffle the vector so it has X-Z first and Y is used to scale so it intersects with a ground plane
@@ -71,6 +70,9 @@ ground_matrix = (
 
 def transform_array(arr):
     """Transforms an array of points of shape (N, 2) from image coordinates to plane coordinates (in mm)"""
+    points = cv2.fisheye.undistortImage(arr, camera_matrix, dist_coeffs).reshape(
+        (-1, 2)
+    )
     points = np.hstack([arr, np.ones((len(arr), 1))])  # make into 3D arrays (X, Y, 1)
     projected = (
         points @ ground_matrix.T
