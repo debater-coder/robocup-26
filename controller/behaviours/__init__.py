@@ -1,6 +1,5 @@
 from behaviours.CameraBehaviour import CameraBehaviour
 from behaviours.ChaseBehaviour import ChaseBehaviour
-from behaviours.GetGoalTargetBehaviour import GetGoalTargetBehaviour
 from behaviours.GoForwardsBehaviour import GoForwardsBehaviour
 from behaviours.HasPossessionBehaviour import HasPossessionBehaviour
 from behaviours.IsGoalCloseBehaviour import IsGoalCloseBehaviour
