@@ -2,6 +2,7 @@ import typing
 
 import numpy as np
 import py_trees
+import rerun as rr
 
 from protocols.command import SupportsCommand
 
@@ -53,7 +54,12 @@ class ChaseBehaviour(py_trees.behaviour.Behaviour):
             if vel_length != 0:
                 velocity *= min(vel_length, 300) / vel_length
 
-            self.command.send_command(round(velocity[0]), round(velocity[1]), 0, 1)
+            rr.log(
+                "/camera/world/velocity",
+                rr.Arrows3D(vectors=[velocity[0], velocity[1], 0]),
+            )
+
+            self.command.send_command(round(velocity[1]), round(velocity[0]), 0, 1)
 
         else:
             self.command.send_command(0, 0, 10, 1)
