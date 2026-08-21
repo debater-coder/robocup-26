@@ -188,11 +188,13 @@ def process_frame(frame: MatLike, go_to_cyan: bool, frame_idx=0):
 
     for contour in contours:
         x, y, w, h = cv2.boundingRect(contour)
+        pt = (x + w / 2, y + h)
+        rr.log("/camera/goal/candidate_point", rr.Points2D(positions=[pt]))
         rr.log(
             "/camera/goal/candidate_bb",
             rr.Boxes2D(mins=[(x, y)], sizes=[(w, h)]),
         )
-        pt = transform_array(np.array([[x + w / 2, y + h]]))[0]
+        pt = transform_array(np.array([pt[0], pt[1]]))[0]
 
         if np.isnan(pt).any():
             rr.log("/camera/log", rr.TextLog("Goal detected out of range!"))
