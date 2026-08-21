@@ -60,9 +60,7 @@ class ChaseBehaviour(py_trees.behaviour.Behaviour):
                 rr.Arrows3D(vectors=[velocity[0], velocity[1], 0]),
             )
 
-            self.command.send_command(
-                round(velocity[1]), round(velocity[0]), np.clip(-theta * 3, -20, 20), 1
-            )
+            self.command.send_command(round(velocity[1]), round(velocity[0]), theta, 1)
 
         else:
             self.command.send_command(0, 0, 10, 1)
