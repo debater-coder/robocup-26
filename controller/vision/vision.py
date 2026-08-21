@@ -71,7 +71,7 @@ ground_matrix = (
 def transform_array(arr):
     """Transforms an array of points of shape (N, 2) from image coordinates to plane coordinates (in mm)"""
     points = cv2.fisheye.undistortPoints(
-        arr.astype(np.float64), camera_matrix, dist_coeffs
+        arr.reshape(-1, 1, 2).astype(np.float64), camera_matrix, dist_coeffs
     ).reshape((-1, 2))
     points = np.hstack([arr, np.ones((len(arr), 1))])  # make into 3D arrays (X, Y, 1)
     projected = (
