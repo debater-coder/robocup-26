@@ -53,7 +53,7 @@ class ChaseBehaviour(py_trees.behaviour.Behaviour):
             if vel_length != 0:
                 velocity *= min(vel_length, 300) / vel_length
 
-            self.command.send_command(velocity[0], velocity[1], 0, 1)
+            self.command.send_command(round(velocity[0]), round(velocity[1]), 0, 1)
 
         else:
             self.command.send_command(0, 0, 10, 1)

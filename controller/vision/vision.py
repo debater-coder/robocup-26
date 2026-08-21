@@ -132,14 +132,12 @@ def process_frame(frame: MatLike, go_to_cyan: bool, frame_idx=0):
             rr.Ellipses2D(half_sizes=[(radius, radius)], centers=[(x, y)]),
         )
 
-        ball_centre = transform_array(np.array([[x, y]]))[0]
+        pt = transform_array(np.array([[x, y]]))[0]
 
-        if (
-            np.isnan(ball_centre).any() or np.linalg.norm(ball_centre) > 3000
-        ):  # filter out too far away
+        if np.isnan(pt).any() or np.linalg.norm(pt) > 3000:  # filter out too far away
             continue
 
-        ball_centre = tuple(ball_centre)
+        ball_centre = tuple(pt)
 
         rr.log(
             "/camera/world/ball",
@@ -194,14 +192,12 @@ def process_frame(frame: MatLike, go_to_cyan: bool, frame_idx=0):
             "/camera/goal/bb",
             rr.Boxes2D(mins=[(x, y)], sizes=[(w, h)]),
         )
-        goal_centre = transform_array(np.array([[x + w / 2, y + h]]))[0]
+        pt = transform_array(np.array([[x + w / 2, y + h]]))[0]
 
-        if (
-            np.isnan(goal_centre).any() or np.linalg.norm(goal_centre) > 3000
-        ):  # filter out too far away
+        if np.isnan(pt).any() or np.linalg.norm(pt) > 3000:  # filter out too far away
             continue
 
-        goal_centre = tuple(goal_centre)
+        goal_centre = tuple(pt)
 
         rr.log(
             "/camera/world/goal",
