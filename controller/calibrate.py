@@ -37,7 +37,7 @@ objpoints = []  # 3d point in real world space
 imgpoints = []  # 2d points in image plane.
 
 
-while len(objpoints) < 20:
+while len(objpoints) < 100:
     frame = frame_buffer[:, :, :3]
     gray = cv.cvtColor(frame, cv.COLOR_BGR2GRAY)
 
