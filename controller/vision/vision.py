@@ -10,7 +10,7 @@ import rerun as rr
 from cv2.typing import MatLike
 from scipy.spatial.transform import Rotation as R
 
-CAMERA_HEIGHT = 120  # mm
+CAMERA_HEIGHT = 145  # mm
 CAMERA_ELEVATION_ANGLE = np.radians(15)  # down = +ve
 
 ORANGE_LOWER = np.array([0, 160, 120])
