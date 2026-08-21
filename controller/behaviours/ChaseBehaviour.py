@@ -49,6 +49,7 @@ class ChaseBehaviour(py_trees.behaviour.Behaviour):
         if target is not None:
             self.feedback_message = "chasing target"
             velocity = K_p * np.array(target)
+            theta = np.arctan2(target[1], target[0])
             vel_length = np.linalg.norm(velocity)
 
             if vel_length != 0:
@@ -59,7 +60,9 @@ class ChaseBehaviour(py_trees.behaviour.Behaviour):
                 rr.Arrows3D(vectors=[velocity[0], velocity[1], 0]),
             )
 
-            self.command.send_command(round(velocity[1]), round(velocity[0]), 0, 1)
+            self.command.send_command(
+                round(velocity[1]), round(velocity[0]), np.clip(-theta * 12, -20, 20), 1
+            )
 
         else:
             self.command.send_command(0, 0, 10, 1)
