@@ -146,7 +146,7 @@ def process_frame(frame: MatLike, go_to_cyan: bool, frame_idx=0):
             rr.Points3D(positions=[(ball_centre[0], ball_centre[1], 0)]),
         )
 
-    if not ball_centre:
+    if ball_centre is not None:
         rr.log("/camera/ball/circle", rr.Clear(recursive=True))
         rr.log("/camera/world/ball", rr.Clear(recursive=True))
 
@@ -208,7 +208,7 @@ def process_frame(frame: MatLike, go_to_cyan: bool, frame_idx=0):
             rr.Points3D(positions=[goal_centre[0], goal_centre[1], 0]),
         )
 
-    if not goal_centre:
+    if goal_centre is not None:
         rr.log("/camera/goal/bb", rr.Clear(recursive=True))
         rr.log("/camera/world/goal", rr.Clear(recursive=True))
     return VisionInfo(ball=ball_centre, goal=goal_centre)
