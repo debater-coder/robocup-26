@@ -139,7 +139,10 @@ def process_frame(frame: MatLike, go_to_cyan: bool, frame_idx=0):
 
         ball_centre = tuple(ball_centre)
 
-        rr.log("/camera/world/ball", rr.Points2D(positions=[ball_centre]))
+        rr.log(
+            "/camera/world/ball",
+            rr.Points3D(positions=[(ball_centre[0], ball_centre[1], 0)]),
+        )
 
     if not ball_centre:
         rr.log("/camera/ball/circle", rr.Clear(recursive=True))
@@ -198,7 +201,10 @@ def process_frame(frame: MatLike, go_to_cyan: bool, frame_idx=0):
 
         goal_centre = tuple(goal_centre)
 
-        rr.log("/camera/world/goal", rr.Points2D(positions=[goal_centre]))
+        rr.log(
+            "/camera/world/goal",
+            rr.Points2D(positions=[goal_centre[0], goal_centre[1], 0]),
+        )
 
     if not goal_centre:
         rr.log("/camera/goal/bb", rr.Clear(recursive=True))
