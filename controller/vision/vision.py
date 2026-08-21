@@ -203,7 +203,7 @@ def process_frame(frame: MatLike, go_to_cyan: bool, frame_idx=0):
 
         rr.log(
             "/camera/world/goal",
-            rr.Points2D(positions=[goal_centre[0], goal_centre[1], 0]),
+            rr.Points3D(positions=[goal_centre[0], goal_centre[1], 0]),
         )
 
     if not goal_centre:
