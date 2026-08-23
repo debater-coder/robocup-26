@@ -204,12 +204,14 @@ def process_frame(frame: MatLike, go_to_cyan: bool, frame_idx=0):
 
         rr.log(
             "/camera/world/goal",
-            rr.Points3D(positions=[goal_centre[1], goal_centre[0], 0]),
+            rr.Points3D(positions=[goal_centre[0], goal_centre[1], 0]),
         )
 
     if goal_centre is None:
         rr.log("/camera/goal/bb", rr.Clear(recursive=True))
         rr.log("/camera/world/goal", rr.Clear(recursive=True))
+
+    rr.log("/camera/world/robot", rr.TransformAxes3D(100))
     return VisionInfo(ball=ball_centre, goal=goal_centre)
 
 

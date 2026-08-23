@@ -12,7 +12,7 @@ from picamera2 import Picamera2
 
 cam = Picamera2()
 config = cam.create_video_configuration(main={"size": (800, 600)})
-cam.set_controls({"ExposureValue": -1.0})
+cam.set_controls({"ExposureValue": -2.0})
 cam.configure(config)
 cam.start()
 frame = np.rot90(cam.capture_array(), k=2, axes=(0, 1))
