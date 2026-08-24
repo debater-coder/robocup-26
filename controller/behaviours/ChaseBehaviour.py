@@ -51,20 +51,19 @@ class ChaseBehaviour(py_trees.behaviour.Behaviour):
         if target is not None:
             self.feedback_message = "chasing target"
             x = target[0]
-            y = target[1]
             theta = np.arctan2(target[0], target[1])
 
             # Update errors
             vel_x = self.pid_x(x)
-            vel_y = 0
+            vel_y = 300
             # vel_theta = self.pid_theta(theta)
             vel_theta = 0
 
-            # rr.log("/chase/theta/measured", rr.Scalars(theta))
-            # rr.log("/chase/theta/out", rr.Scalars(vel_theta))
-            # rr.log("/chase/theta/p", rr.Scalars(self.pid_theta.components[0]))
-            # rr.log("/chase/theta/i", rr.Scalars(self.pid_theta.components[1]))
-            # rr.log("/chase/theta/d", rr.Scalars(self.pid_theta.components[2]))
+            rr.log("/chase/theta/measured", rr.Scalars(theta))
+            rr.log("/chase/theta/out", rr.Scalars(vel_theta))
+            rr.log("/chase/theta/p", rr.Scalars(self.pid_theta.components[0]))
+            rr.log("/chase/theta/i", rr.Scalars(self.pid_theta.components[1]))
+            rr.log("/chase/theta/d", rr.Scalars(self.pid_theta.components[2]))
             rr.log("/chase/x/measured", rr.Scalars(x))
             rr.log("/chase/x/out", rr.Scalars(vel_x))
             rr.log("/chase/x/p", rr.Scalars(self.pid_x.components[0]))
