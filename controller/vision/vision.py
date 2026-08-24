@@ -20,7 +20,7 @@ YELLOW_LOWER = np.array([20, 80, 120])
 YELLOW_UPPER = np.array([35, 255, 255])
 
 CYAN_LOWER = np.array([85, 50, 50])
-CYAN_UPPER = np.array([130, 255, 255])
+CYAN_UPPER = np.array([100, 255, 255])
 
 WHITE_LOWER = np.array([0, 0, 230])
 WHITE_UPPER = np.array([180, 30, 255])
