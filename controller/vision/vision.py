@@ -134,11 +134,7 @@ def process_frame(frame: MatLike, go_to_cyan: bool, frame_idx=0):
 
         pt = transform_array(np.array([[x, y]]))[0]
 
-        if (
-            np.isnan(pt).any()
-            or np.linalg.norm(pt) > 3000
-            or cv2.contourArea(contour) < 200
-        ):  # filter out too far away
+        if np.isnan(pt).any() or np.linalg.norm(pt) > 3000:  # filter out too far away
             continue
 
         ball_centre = tuple(pt)
