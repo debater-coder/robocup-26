@@ -149,7 +149,11 @@ def process_frame(frame: MatLike, go_to_cyan: bool, frame_idx=0):
         rr.log("/camera/world/ball", rr.Clear(recursive=True))
 
     # White lines
-    mask = cv2.inRange(cv2.pyrDown(hsv), WHITE_LOWER, WHITE_UPPER)
+    mask = cv2.inRange(
+        cv2.resize(hsv, None, fx=0.5, fy=0.5, interpolation=cv2.INTER_NEAREST),
+        WHITE_LOWER,
+        WHITE_UPPER,
+    )
     log_image("/camera/lines/mask", mask, frame_idx)
     edges = cv2.Canny(mask, 50, 200)
     log_image("/camera/lines/edges", edges, frame_idx)
