@@ -22,7 +22,7 @@ class HasPossessionBehaviour(py_trees.behaviour.Behaviour):
     def update(self):
         tof = self.command.get_ball_tof()
 
-        if tof is not None and tof < 100:
+        if tof is not None and tof < 80:
             return py_trees.common.Status.SUCCESS
 
         return py_trees.common.Status.FAILURE
