@@ -7,8 +7,6 @@ from simple_pid import PID
 
 from protocols.command import SupportsCommand
 
-K_p = 3
-
 
 class ChaseBehaviour(py_trees.behaviour.Behaviour):
     def __init__(
@@ -37,9 +35,9 @@ class ChaseBehaviour(py_trees.behaviour.Behaviour):
             remap_to=remap_to.get("/camera/shape"),
         )
 
-        self.pid_x = PID(3, 0, 0.1, setpoint=0)
-        self.pid_y = PID(3, 0, 0.1, setpoint=0)
-        self.pid_theta = PID(3, 0.5, 0.5, setpoint=0, output_limits=(-20, 20))
+        self.pid_x = PID(3, 0, 0, setpoint=0)
+        self.pid_y = PID(3, 0, 0, setpoint=0)
+        self.pid_theta = PID(5, 0, 0.5, setpoint=0, output_limits=(-20, 20))
 
     def setup(self, **kwargs: typing.Any) -> None:
         if "command" in kwargs and isinstance(
@@ -58,8 +56,10 @@ class ChaseBehaviour(py_trees.behaviour.Behaviour):
             theta = np.arctan2(target[0], target[1])
 
             # Update errors
-            vel_x = -self.pid_x(x)
-            vel_y = -self.pid_y(y)
+            # vel_x = -self.pid_x(x)
+            vel_x = 0
+            # vel_y = -self.pid_y(y)
+            vel_y = 0
             vel_theta = -self.pid_theta(theta)
 
             velocity = np.array([vel_x, vel_y])
