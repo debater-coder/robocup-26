@@ -37,7 +37,7 @@ class ChaseBehaviour(py_trees.behaviour.Behaviour):
 
         self.pid_x = PID(3, 0, 0, setpoint=0)
         self.pid_y = PID(3, 0, 0, setpoint=0)
-        self.pid_theta = PID(5, 0, 0.5, setpoint=0, output_limits=(-20, 20))
+        self.pid_theta = PID(10, 0, 5, setpoint=0, output_limits=(-20, 20))
 
     def setup(self, **kwargs: typing.Any) -> None:
         if "command" in kwargs and isinstance(
