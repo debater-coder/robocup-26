@@ -37,7 +37,7 @@ class ChaseBehaviour(py_trees.behaviour.Behaviour):
 
         self.pid_x = PID(3, 0, 0, setpoint=0)
         self.pid_y = PID(3, 0, 0, setpoint=0)
-        self.pid_theta = PID(10, 0, 5, setpoint=0, output_limits=(-20, 20))
+        self.pid_theta = PID(-10, 0, -5, setpoint=0, output_limits=(-20, 20))
 
     def setup(self, **kwargs: typing.Any) -> None:
         if "command" in kwargs and isinstance(
@@ -60,7 +60,12 @@ class ChaseBehaviour(py_trees.behaviour.Behaviour):
             vel_x = 0
             # vel_y = -self.pid_y(y)
             vel_y = 0
-            vel_theta = -self.pid_theta(theta)
+            vel_theta = self.pid_theta(theta)
+
+            rr.log("/chase/theta/measured", rr.Scalars(theta))
+            rr.log("/chase/theta/p", rr.Scalars(self.pid_theta.components[0]))
+            rr.log("/chase/theta/i", rr.Scalars(self.pid_theta.components[1]))
+            rr.log("/chase/theta/d", rr.Scalars(self.pid_theta.components[2]))
 
             velocity = np.array([vel_x, vel_y])
 
