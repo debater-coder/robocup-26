@@ -35,7 +35,7 @@ class ChaseBehaviour(py_trees.behaviour.Behaviour):
             remap_to=remap_to.get("/camera/shape"),
         )
 
-        self.pid_x = PID(1, 0, 0, setpoint=0)
+        self.pid_x = PID(-1, 0, -0.1, setpoint=0)
         self.pid_theta = PID(-5, 0, -0.1, setpoint=0, output_limits=(-20, 20))
 
     def setup(self, **kwargs: typing.Any) -> None:
@@ -55,7 +55,7 @@ class ChaseBehaviour(py_trees.behaviour.Behaviour):
             theta = np.arctan2(target[0], target[1])
 
             # Update errors
-            vel_x = -self.pid_x(x)
+            vel_x = self.pid_x(x)
             vel_y = 0
             # vel_theta = self.pid_theta(theta)
             vel_theta = 0
