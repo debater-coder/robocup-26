@@ -14,4 +14,5 @@ dependencies = [
     "rerun-sdk>=0.33.0",
     "pyzmq>=27.1.0",
     "scipy>=1.15.3",
+    "simple-pid>=2.0.1",
 ]

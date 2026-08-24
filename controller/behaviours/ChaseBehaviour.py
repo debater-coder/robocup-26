@@ -3,6 +3,7 @@ import typing
 import numpy as np
 import py_trees
 import rerun as rr
+from simple_pid import PID
 
 from protocols.command import SupportsCommand
 
@@ -36,6 +37,10 @@ class ChaseBehaviour(py_trees.behaviour.Behaviour):
             remap_to=remap_to.get("/camera/shape"),
         )
 
+        self.pid_x = PID(3, 0, 0.1, setpoint=0)
+        self.pid_y = PID(3, 0, 0.1, setpoint=0)
+        self.pid_theta = PID(3, 0.5, 0.5, setpoint=0, output_limits=(-20, 20))
+
     def setup(self, **kwargs: typing.Any) -> None:
         if "command" in kwargs and isinstance(
             command := kwargs["command"], SupportsCommand
@@ -48,10 +53,19 @@ class ChaseBehaviour(py_trees.behaviour.Behaviour):
         target = self.blackboard.target
         if target is not None:
             self.feedback_message = "chasing target"
-            velocity = K_p * np.array(target)
+            x = target[0]
+            y = target[1]
             theta = np.arctan2(target[0], target[1])
-            vel_length = np.linalg.norm(velocity)
 
+            # Update errors
+            vel_x = self.pid_x(x)
+            vel_y = self.pid_y(y)
+            vel_theta = self.pid_theta(theta)
+
+            velocity = np.array([vel_x, vel_y])
+
+            # Normalise velocity vector length
+            vel_length = np.linalg.norm(velocity)
             if vel_length != 0:
                 velocity *= min(vel_length, 300) / vel_length
 
@@ -60,9 +74,8 @@ class ChaseBehaviour(py_trees.behaviour.Behaviour):
                 rr.Arrows3D(vectors=[velocity[0], velocity[1], 0]),
             )
 
-            self.command.send_command(
-                velocity[1], velocity[0], np.clip(theta * 5, -20, 20), 1
-            )
+            # X-forwards coordinates
+            self.command.send_command(velocity[1], velocity[0], vel_theta, 1)
 
         else:
             self.command.send_command(0, 0, 10, 1)
