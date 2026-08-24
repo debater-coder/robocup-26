@@ -3,6 +3,8 @@ import py_trees
 from behaviours import (
     CameraBehaviour,
     ChaseBehaviour,
+    ChaseBehaviourSimple,
+    GetGoalTargetBehaviour,
     HasPossessionBehaviour,
     OutOfBoundsBehaviour,
     StopGoBehaviour,
@@ -11,10 +13,13 @@ from behaviours import (
 
 def create_attempt_goal_root():
     has_possession = HasPossessionBehaviour("Has Posession?")
-    goal_chase = ChaseBehaviour("Goal Chase", remap_to={"/target": "/goal"})
+    get_target = GetGoalTargetBehaviour("Get Goal Target")
+    goal_chase = ChaseBehaviourSimple(
+        "Goal Chase", remap_to={"/target": "/goal/target"}
+    )
 
     attempt_goal = py_trees.composites.Sequence(
-        "Attempt Goal", memory=False, children=[has_possession, goal_chase]
+        "Attempt Goal", memory=False, children=[has_possession, get_target, goal_chase]
     )
     return attempt_goal
 

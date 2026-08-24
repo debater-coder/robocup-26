@@ -1,5 +1,7 @@
 from behaviours.CameraBehaviour import CameraBehaviour
 from behaviours.ChaseBehaviour import ChaseBehaviour
+from behaviours.ChaseBehaviourSimple import ChaseBehaviourSimple
+from behaviours.GetGoalTargetBehaviour import GetGoalTargetBehaviour
 from behaviours.GoForwardsBehaviour import GoForwardsBehaviour
 from behaviours.HasPossessionBehaviour import HasPossessionBehaviour
 from behaviours.IsGoalCloseBehaviour import IsGoalCloseBehaviour
@@ -16,4 +18,6 @@ __all__ = [
     "OutOfBoundsBehaviour",
     "StopGoBehaviour",
     "GoForwardsBehaviour",
+    "ChaseBehaviourSimple",
+    "GetGoalTargetBehaviour",
 ]

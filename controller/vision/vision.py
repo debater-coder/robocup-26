@@ -97,6 +97,7 @@ def transform_array(arr):
 class VisionInfo:
     ball: tuple[float, float] | None
     goal: tuple[float, float] | None
+    goal_bb: tuple[float, float, float, float] | None
 
 
 def log_image(path: str, frame: MatLike, idx):
@@ -185,6 +186,7 @@ def process_frame(frame: MatLike, go_to_cyan: bool, frame_idx=0):
     contours.sort(key=cv2.contourArea, reverse=True)
 
     goal_centre = None
+    goal_bb = None
 
     for contour in contours:
         x, y, w, h = cv2.boundingRect(contour)
@@ -201,6 +203,7 @@ def process_frame(frame: MatLike, go_to_cyan: bool, frame_idx=0):
             continue
 
         goal_centre = tuple(pt)
+        goal_bb = (x, y, w, h)
 
         rr.log(
             "/camera/world/goal",
@@ -212,7 +215,7 @@ def process_frame(frame: MatLike, go_to_cyan: bool, frame_idx=0):
         rr.log("/camera/world/goal", rr.Clear(recursive=True))
 
     rr.log("/camera/world/robot", rr.TransformAxes3D(100))
-    return VisionInfo(ball=ball_centre, goal=goal_centre)
+    return VisionInfo(ball=ball_centre, goal=goal_centre, goal_bb=goal_bb)
 
 
 # Vision testing repl
