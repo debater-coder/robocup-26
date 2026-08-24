@@ -61,7 +61,7 @@ class ChaseBehaviour(py_trees.behaviour.Behaviour):
             )
 
             self.command.send_command(
-                velocity[1], velocity[0], np.clip(theta * 20, -20, 20), 1
+                velocity[1], velocity[0], np.clip(theta * 10, -20, 20), 1
             )
 
         else:
