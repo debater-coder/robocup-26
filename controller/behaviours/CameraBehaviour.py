@@ -17,9 +17,7 @@ class CameraBehaviour(py_trees.behaviour.Behaviour):
         self.blackboard.register_key(
             "/goal/centre", access=py_trees.common.Access.WRITE
         )
-        self.blackboard.register_key(
-            "/goal/target", access=py_trees.common.Access.WRITE
-        )
+        self.blackboard.register_key("/goal/bb", access=py_trees.common.Access.WRITE)
 
         self.blackboard.register_key(
             "/camera/shape", access=py_trees.common.Access.WRITE
@@ -61,7 +59,7 @@ class CameraBehaviour(py_trees.behaviour.Behaviour):
 
         self.blackboard.ball = info.ball
         self.blackboard.goal.centre = info.goal
-        self.blackboard.goal.target = info.goal_bb
+        self.blackboard.goal.bb = info.goal_bb
 
         return py_trees.common.Status.RUNNING
 
