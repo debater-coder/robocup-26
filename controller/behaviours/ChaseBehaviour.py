@@ -58,9 +58,9 @@ class ChaseBehaviour(py_trees.behaviour.Behaviour):
             theta = np.arctan2(target[0], target[1])
 
             # Update errors
-            vel_x = self.pid_x(x)
-            vel_y = self.pid_y(y)
-            vel_theta = self.pid_theta(theta)
+            vel_x = -self.pid_x(x)
+            vel_y = -self.pid_y(y)
+            vel_theta = -self.pid_theta(theta)
 
             velocity = np.array([vel_x, vel_y])
 
