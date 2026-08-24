@@ -35,7 +35,6 @@ class ChaseBehaviour(py_trees.behaviour.Behaviour):
             remap_to=remap_to.get("/camera/shape"),
         )
 
-        self.pid_x = PID(-1, 0, -0.1, setpoint=0)
         self.pid_theta = PID(-5, 0, -0.1, setpoint=0, output_limits=(-20, 20))
 
     def setup(self, **kwargs: typing.Any) -> None:
@@ -53,24 +52,15 @@ class ChaseBehaviour(py_trees.behaviour.Behaviour):
             x = target[0]
             theta = np.arctan2(target[0], target[1])
 
-            # Update errors
-            vel_x = self.pid_x(x)
-            vel_y = 300
-            # vel_theta = self.pid_theta(theta)
-            vel_theta = 0
+            vel_theta = self.pid_theta(theta)
 
             rr.log("/chase/theta/measured", rr.Scalars(theta))
             rr.log("/chase/theta/out", rr.Scalars(vel_theta))
             rr.log("/chase/theta/p", rr.Scalars(self.pid_theta.components[0]))
             rr.log("/chase/theta/i", rr.Scalars(self.pid_theta.components[1]))
             rr.log("/chase/theta/d", rr.Scalars(self.pid_theta.components[2]))
-            rr.log("/chase/x/measured", rr.Scalars(x))
-            rr.log("/chase/x/out", rr.Scalars(vel_x))
-            rr.log("/chase/x/p", rr.Scalars(self.pid_x.components[0]))
-            rr.log("/chase/x/i", rr.Scalars(self.pid_x.components[1]))
-            rr.log("/chase/x/d", rr.Scalars(self.pid_x.components[2]))
 
-            velocity = np.array([vel_x, vel_y])
+            velocity = np.array([target[0], target[1]]) * 3
 
             # Normalise velocity vector length
             vel_length = np.linalg.norm(velocity)
