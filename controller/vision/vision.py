@@ -149,29 +149,29 @@ def process_frame(frame: MatLike, go_to_cyan: bool, frame_idx=0):
         rr.log("/camera/world/ball", rr.Clear(recursive=True))
 
     # White lines
-    # mask = cv2.inRange(hsv, WHITE_LOWER, WHITE_UPPER)
-    # log_image("/camera/lines/mask", mask, frame_idx)
-    # edges = cv2.Canny(mask, 50, 200)
-    # log_image("/camera/lines/edges", edges, frame_idx)
-    # lines = cv2.HoughLinesP(
-    #     edges, 1, np.pi / 180, threshold=50, minLineLength=30, maxLineGap=50
-    # )
-    # if lines is not None:
-    #     lines = lines.reshape(-1, 2, 2)
+    mask = cv2.inRange(hsv, WHITE_LOWER, WHITE_UPPER)
+    log_image("/camera/lines/mask", mask, frame_idx)
+    edges = cv2.Canny(mask, 50, 200)
+    log_image("/camera/lines/edges", edges, frame_idx)
+    lines = cv2.HoughLinesP(
+        edges, 1, np.pi / 180, threshold=50, minLineLength=30, maxLineGap=50
+    )
+    if lines is not None:
+        lines = lines.reshape(-1, 2, 2)
 
-    #     rr.log("/camera/lines/lines", rr.LineStrips2D(lines))
+        rr.log("/camera/lines/lines", rr.LineStrips2D(lines))
 
-    #     projected_lines = (
-    #         np.hstack(
-    #             [transform_array(lines.reshape(-1, 2)), np.zeros((len(lines) * 2, 1))]
-    #         )
-    #         .reshape(-1, 2, 3)
-    #         .astype(np.float32)
-    #     )
-    #     rr.log("/camera/world/lines", rr.LineStrips3D(projected_lines))
-    # else:
-    #     rr.log("/camera/lines", rr.Clear(recursive=True))
-    #     rr.log("/camera/world/lines", rr.Clear(recursive=True))
+        projected_lines = (
+            np.hstack(
+                [transform_array(lines.reshape(-1, 2)), np.zeros((len(lines) * 2, 1))]
+            )
+            .reshape(-1, 2, 3)
+            .astype(np.float32)
+        )
+        rr.log("/camera/world/lines", rr.LineStrips3D(projected_lines))
+    else:
+        rr.log("/camera/lines", rr.Clear(recursive=True))
+        rr.log("/camera/world/lines", rr.Clear(recursive=True))
 
     # Goal
     mask = cv2.inRange(hsv, goal_lower, goal_upper)
