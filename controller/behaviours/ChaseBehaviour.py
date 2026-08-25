@@ -1,4 +1,5 @@
 import typing
+from math import cos
 
 import numpy as np
 import py_trees
@@ -6,6 +7,10 @@ import rerun as rr
 from simple_pid import PID
 
 from protocols.command import SupportsCommand
+
+
+def mathi(x):
+    return (-12 / (np.pi**2)) * (x + np.pi / 2) * (x - np.pi / 2)
 
 
 class ChaseBehaviour(py_trees.behaviour.Behaviour):
@@ -60,7 +65,7 @@ class ChaseBehaviour(py_trees.behaviour.Behaviour):
             rr.log("/chase/theta/i", rr.Scalars(self.pid_theta.components[1]))
             rr.log("/chase/theta/d", rr.Scalars(self.pid_theta.components[2]))
 
-            velocity = np.array([target[0], target[1]]) * 3
+            velocity = np.array([target[0], target[1]]) * mathi(theta)
 
             # Normalise velocity vector length
             vel_length = np.linalg.norm(velocity)
