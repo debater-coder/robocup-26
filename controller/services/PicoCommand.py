@@ -45,9 +45,6 @@ class PicoCommand(SupportsCommand):
             p.device for p in serial.tools.list_ports.comports() if "ttyACM" in p.device
         ]
         ports.sort()
-        self.debug_process = multiprocessing.Process(target=task, args=(ports[1],))
-        self.debug_process.daemon = True  # so it automatically cleans up
-        self.debug_process.start()
         return serial.Serial(ports[0], timeout=1, write_timeout=1)
 
     def read_cobs_packet(self):
