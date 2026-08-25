@@ -34,11 +34,7 @@ class LineStatusDebounce:
 
 class PicoCommand(SupportsCommand):
     def __init__(self):
-        ports = [
-            p.device for p in serial.tools.list_ports.comports() if "ttyACM" in p.device
-        ]
-        ports.sort()
-        self.ser = serial.Serial(ports[0], timeout=1, write_timeout=1)
+        self.ser = self.init_serial()
         self.command = (0, 0, 0, 0)
 
         self.res = [0, 0, 0, 0, 0]
@@ -47,6 +43,13 @@ class PicoCommand(SupportsCommand):
         self.debug_process = multiprocessing.Process(target=task, args=(ports[1],))
         self.debug_process.daemon = True  # so it automatically cleans up
         self.debug_process.start()
+
+    def init_serial(self):
+        ports = [
+            p.device for p in serial.tools.list_ports.comports() if "ttyACM" in p.device
+        ]
+        ports.sort()
+        return serial.Serial(ports[0], timeout=1, write_timeout=1)
 
     def read_cobs_packet(self):
         buf = bytearray()
@@ -123,10 +126,18 @@ class PicoCommand(SupportsCommand):
         dribbler -- -1 to 1 (+ve is attractive)
         """
         self.command = (int(vx), int(vy), int(math.degrees(vw)), -int(dribbler * 100))
-        self.res = [
-            new if new is not None else old
-            for old, new in zip(self.res, self.send_packet(self.command))
-        ]
+        try:
+            self.res = [
+                new if new is not None else old
+                for old, new in zip(self.res, self.send_packet(self.command))
+            ]
+        except:
+            try:
+                self.ser.close()
+            except:
+                pass
+
+            self.ser = self.init_serial()
 
         rr.log("/pico/command/vx", rr.Scalars(vx))
         rr.log("/pico/command/vy", rr.Scalars(vy))

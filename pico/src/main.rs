@@ -14,7 +14,7 @@ use embassy_futures::join::join;
 use embassy_rp::gpio::{Input, Level, Output, Pull};
 use embassy_rp::peripherals::{PIO0, USB};
 use embassy_rp::pio::Pio;
-use embassy_rp::pwm::Pwm;
+use embassy_rp::pwm::{Config as PwmConfig, Pwm, SetDutyCycle};
 use embassy_rp::usb::{Driver, Instance};
 use embassy_rp::watchdog::Watchdog;
 use embassy_rp::{bind_interrupts, i2c};
@@ -28,6 +28,9 @@ use embassy_usb::{Builder, Config};
 use embedded_hal::digital::{ErrorType, OutputPin};
 use log::{error, info, warn};
 use vl53l0x_simple::Vl53l0x;
+
+const PWM_DIV_INT: u8 = 64;
+const PWM_TOP: u16 = 46_874;
 
 use {defmt_rtt as _, panic_probe as _};
 
@@ -347,20 +350,41 @@ async fn main(spawner: Spawner) {
         }
     };
 
-    let left_ir = Input::new(p.PIN_10, Pull::Down);
-    let back_ir = Input::new(p.PIN_15, Pull::Down);
-    let right_ir = Input::new(p.PIN_18, Pull::Down);
+    let mut servo_config: PwmConfig = Default::default();
+    servo_config.top = PWM_TOP;
+    servo_config.divider = PWM_DIV_INT.into();
+
+    let mut servo = Pwm::new_output_b(p.PWM_SLICE7, p.PIN_15, servo_config);
+
+    let fut = async {
+        loop {
+            match servo.set_duty_cycle_fraction(25, 1000) {
+                Ok(_) => {}
+                Err(_) => warn!("Error"),
+            };
+            Timer::after(Duration::from_millis(500)).await;
+            match servo.set_duty_cycle_fraction(75, 1000) {
+                Ok(_) => {}
+                Err(_) => warn!("Error"),
+            };
+            Timer::after(Duration::from_millis(500)).await;
+        }
+    };
 
     let command_fut = async {
         loop {
             class.wait_connection().await;
             log::info!("Connected");
-            let _ = handle_commands(&mut class, &left_ir, &back_ir, &right_ir).await;
+            let _ = handle_commands(&mut class).await;
             log::info!("Disconnected");
         }
     };
 
-    join(tof_fut, join(usb_fut, join(command_fut, log_fut))).await;
+    join(
+        fut,
+        join(tof_fut, join(usb_fut, join(command_fut, log_fut))),
+    )
+    .await;
 }
 
 struct Disconnected {}
@@ -376,9 +400,6 @@ impl From<EndpointError> for Disconnected {
 
 async fn handle_commands<'d, T: Instance + 'd>(
     class: &mut CdcAcmClass<'d, Driver<'d, T>>,
-    left_ir: &Input<'d>,
-    back_ir: &Input<'d>,
-    right_ir: &Input<'d>,
 ) -> Result<(), Disconnected> {
     let mut buf = [0; 64];
     let mut dest = [0; 1024];
@@ -433,11 +454,7 @@ async fn handle_commands<'d, T: Instance + 'd>(
                                 odoms[i / 4].to_be_bytes()[i % 4]
                             }))
                             .and_then(|_| encoder.push(&tof_reading.to_be_bytes()))
-                            .and_then(|_| {
-                                encoder.push(&[(left_ir.is_low() as u8)
-                                    | ((back_ir.is_low() as u8) << 1)
-                                    | ((right_ir.is_low() as u8) << 2)])
-                            })
+                            .and_then(|_| encoder.push(&[0]))
                         else {
                             warn!("Error encoding data!");
                             continue 'outer;
