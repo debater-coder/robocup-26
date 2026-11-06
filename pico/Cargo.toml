@@ -2,7 +2,6 @@
 edition = "2021"
 name = "pico"
 version = "0.1.0"
-license = "MIT OR Apache-2.0"
 
 [dependencies]
 micromath = "2.1.0"
@@ -20,10 +19,24 @@ rp-pico = "0.9"
 panic-halt = "1.0.0"
 usb-device = "0.3.2"
 usbd-serial = "0.2.2"
-embassy-executor = {version="0.9.1", features=["arch-cortex-m", "executor-thread", "executor-interrupt", "defmt"]}
-embassy-rp = { version = "0.8.0", features = ["defmt", "unstable-pac", "time-driver", "critical-section-impl", "rp2040"] }
-embassy-time = { version = "0.5.0", features = ["defmt", "defmt-timestamp-uptime"] }
-embassy-usb = { version = "0.5.1",  features = ["defmt"] }
+embassy-executor = { version = "0.9.1", features = [
+    "arch-cortex-m",
+    "executor-thread",
+    "executor-interrupt",
+    "defmt",
+] }
+embassy-rp = { version = "0.8.0", features = [
+    "defmt",
+    "unstable-pac",
+    "time-driver",
+    "critical-section-impl",
+    "rp2040",
+] }
+embassy-time = { version = "0.5.0", features = [
+    "defmt",
+    "defmt-timestamp-uptime",
+] }
+embassy-usb = { version = "0.5.1", features = ["defmt"] }
 embassy-usb-logger = "0.5.1"
 log = "0.4.28"
 static_cell = { version = "2.1.1", features = ["nightly"] }
